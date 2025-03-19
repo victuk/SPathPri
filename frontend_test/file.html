@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Document</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@picocss/pico@1/css/pico.min.css">
+</head>
+<body>
+    
+    <input type="file" name="" id="file">
+    <button onclick="submit()">Submit</button>
+
+    <script>
+        const name = document.getElementById("name");
+        const file = document.getElementById("file");        
+
+        function submit() {
+
+            const formData = new FormData();
+            formData.append("file", file.files[0]);
+
+            fetch("http://localhost:3000/v1/auth/test-file-upload", {
+                method: "POST",
+                body: formData
+            })
+            .then(res => res.json())
+            .then(data => {
+                console.log(data);
+            })
+            .catch(error => {
+                console.log("Error:", error);
+            });
+        }
+
+    </script>
+
+</body>
+</html>

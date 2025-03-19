@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Document</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@picocss/pico@1/css/pico.min.css">
+</head>
+<body>
+    
+    <input type="file" name="" id="one">
+    <input type="file" name="" id="two">
+    <input type="file" name="" id="three">
+    <button onclick="submitFile()">Submit</button>
+
+    <script>
+        const one = document.getElementById("one");
+        const two = document.getElementById("two");
+        const three = document.getElementById("three");
+
+        function submitFile() {
+            
+            const formData = new FormData();
+            formData.append("driversLicense", one.files[0]);
+            formData.append("personalImage", two.files[0]);
+            formData.append("governmentId", three.files[0]);
+
+            fetch("http://localhost:3000/v1/auth/identity-verification", {
+                method: "POST",
+                headers: {
+                    authorization: "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJlbWFpbCI6InVrb2tqbnJAZ21haWwuY29tIiwidXNlcklkIjoiNjRlNWM2ZTU4ZjlhYzBkMTI4OTZmNTAwIiwiZnVsbE5hbWUiOiJWaWN0b3IgVWtvayIsInJvbGUiOiJzaG9wcGVyIiwiaWF0IjoxNjkzMDQ3NTQwfQ.JXxrE3eBe4Bll6q7LCZ55peCv3k0TKaN01RdQItY6gM"
+                },
+                body: formData
+            })
+            .then(res => res.json())
+            .then(data => {
+                console.log(data);
+            })
+            .catch(error => {
+                console.log("Error:", error);
+            });
+
+        }
+
+    </script>
+
+</body>
+</html>

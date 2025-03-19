@@ -1,0 +1,3 @@
+const DEFAULT_RESPONSE_ERROR_MESSAGE = 'Request failed ❌';
+
+export default DEFAULT_RESPONSE_ERROR_MESSAGE;

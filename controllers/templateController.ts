@@ -1,0 +1,99 @@
+import { NextFunction, Response } from "express";
+import { CustomRequest } from "../middleware/authenticatedUsersOnly";
+import { staffsCollection } from "../models/staffs";
+import { schoolProfileCollection } from "../models/schoolProfile";
+import { schoolTemplateCollection } from "../models/schoolTemplateModel";
+
+export const getSchoolTemplates = async (
+  req: CustomRequest,
+  res: Response,
+  next: NextFunction
+) => {
+  try {
+    const staffDetails = await staffsCollection.findById(
+      req.userDetails?.userId
+    );
+
+    const templates = await schoolTemplateCollection.find({
+      schoolId: staffDetails?.schoolId,
+    }).populate("uploadedById", "firstName surname role");
+
+    res.send({
+      message: "Templates fetched successfully",
+      result: templates,
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const uploadSchoolTemplate = async (
+  req: CustomRequest,
+  res: Response,
+  next: NextFunction
+) => {
+  try {
+    const { templateType, fileLink } = req.body;
+
+    const staffDetails = await staffsCollection.findById(
+      req.userDetails?.userId
+    );
+
+    const templateExists = await schoolTemplateCollection.findOne({
+      uploadedById: req.userDetails?.userId,
+      schoolId: staffDetails?.schoolId,
+      templateType,
+    });
+
+    if (templateExists) {
+      await schoolTemplateCollection.findByIdAndUpdate(templateExists._id, {
+        fileLink,
+      });
+    } else {
+      await schoolTemplateCollection.create({
+        uploadedById: req.userDetails?.userId,
+        templateType,
+        fileLink,
+        schoolId: staffDetails?.schoolId,
+      });
+    }
+
+    res.send({
+      message: "Template updated successfully",
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const deleteSchoolTemplate = async (
+    req: CustomRequest,
+  res: Response,
+  next: NextFunction
+) => {
+    try {
+        
+        const {id} = req.params;
+
+        const staffDetails = await staffsCollection.findById(req.userDetails?.userId);
+
+        const templateDetails = await schoolTemplateCollection.findById(id);
+
+        if((staffDetails!!.schoolId).toString() != (templateDetails!!.schoolId).toString()) {
+            res.status(401).send({
+                message: "You are not allowed to take this action"
+            });
+            return;
+        }
+
+        const deletedFile = await schoolTemplateCollection.findByIdAndDelete(id);
+
+        res.send({
+            message: "File deleted successfully",
+            result: deletedFile
+        });
+
+    } catch (error) {
+        next(error);
+    }
+}
