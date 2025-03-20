@@ -592,7 +592,7 @@ export const createStudent = async (
 
     console.log("req.body", req.body);
 
-    const password = "stu12345678";
+    const password = "dominion1234";
 
     const staffDetails = await staffsCollection.findById(
       req.userDetails?.userId
@@ -916,7 +916,7 @@ export const createStaff = async (
 
     const schoolDetails = await schoolProfileCollection.findById(schoolId);
 
-    const password = "dominion1234";
+    const password = "staff123";
 
     let newStaff: any;
 
