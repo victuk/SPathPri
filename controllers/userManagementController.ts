@@ -12,6 +12,7 @@ import { v4 } from "uuid";
 import { createStaffId, createStudentId } from "../utils/idCreatorUtils";
 import { remarkAndGrade } from "../utils/assessmentRemarkUtil";
 import { classPositionAndRemarksCollection } from "../models/classPositionAndRemarksModel";
+import { normalizePhoneNumber } from "../utils/normalizePhoneNumber";
 
 export const getStudents = async (
   req: CustomRequest,
@@ -169,11 +170,21 @@ export const changeStudentsClass = async (
       _id: { $in: studentIds },
     });
 
-    const schoolDetails = await schoolProfileCollection.findById(req.userDetails?.schoolId);
+    const schoolDetails = await schoolProfileCollection.findById(
+      req.userDetails?.schoolId
+    );
 
-    await resultCollection.updateMany({_id: { $in: studentIds }, year: schoolDetails?.currentYear, term: schoolDetails?.currentYear, schoolId: req.userDetails?.schoolId}, {
-      studentClass: newClassId
-    });
+    await resultCollection.updateMany(
+      {
+        _id: { $in: studentIds },
+        year: schoolDetails?.currentYear,
+        term: schoolDetails?.currentYear,
+        schoolId: req.userDetails?.schoolId,
+      },
+      {
+        studentClass: newClassId,
+      }
+    );
 
     res.send({
       result: `The following student's class${
@@ -501,25 +512,21 @@ export const deleteStudentAssessment = async (
   next: NextFunction
 ) => {
   try {
+    const { studentId, subjectId, classId } = req.body;
 
-    const {
+    await resultCollection.findOneAndDelete({
       studentId,
       subjectId,
-      classId
-    } = req.body;
-    
-    await resultCollection.findOneAndDelete({
-      studentId, subjectId, studentClass: classId
+      studentClass: classId,
     });
 
     res.send({
-      message: "Result deleted successfully"
+      message: "Result deleted successfully",
     });
-
   } catch (error) {
     next(error);
   }
-}
+};
 
 export const getStudent = async (
   req: CustomRequest,
@@ -539,6 +546,22 @@ export const getStudent = async (
   }
 };
 
+export const getAllSchoolStudents = async (
+  req: CustomRequest,
+  res: Response,
+  next: NextFunction
+) => {
+  try {
+    
+    const students = await studentsCollection.find({schoolId: req.userDetails?.schoolId}).populate("classId");
+
+    res.send({result: students});
+
+  } catch (error) {
+    next(error);
+  }
+}
+
 export const getStudentByEmail = async (
   req: CustomRequest,
   res: Response,
@@ -550,6 +573,31 @@ export const getStudentByEmail = async (
     const student = await studentsCollection
       .findOne(
         { email },
+        "firstName otherNames surname gender profilePic email classId schoolId"
+      )
+      .populate("schoolId", "schoolName schoolUid schoolLogo")
+      .populate("classId");
+
+    res.send({
+      message: "Student retrieved successfully",
+      result: student,
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const getStudentByUID = async (
+  req: CustomRequest,
+  res: Response,
+  next: NextFunction
+) => {
+  try {
+    const { uid } = req.body;
+
+    const student = await studentsCollection
+      .findOne(
+        { studentUid:  uid },
         "firstName otherNames surname gender profilePic email classId schoolId"
       )
       .populate("schoolId", "schoolName schoolUid schoolLogo")
@@ -582,21 +630,19 @@ export const createStudent = async (
       emailVerified,
       classId,
       profilePic,
-      accountStatus,
       phoneNumber,
       phoneNumberVerified,
       admissionYear,
       admissionTerm,
       studentTrack,
+      parentName,
+      parentEmail,
+      parentPhoneNumber,
     } = req.body;
 
     console.log("req.body", req.body);
 
     const password = "dominion1234";
-
-    const staffDetails = await staffsCollection.findById(
-      req.userDetails?.userId
-    );
 
     const schoolDetails = await schoolProfileCollection.findById(
       req.userDetails?.schoolId
@@ -604,28 +650,26 @@ export const createStudent = async (
 
     console.log("req.userDetails?.userId", req.userDetails?.userId);
 
-    if ((req.userDetails?.schoolId != "super-admin" && req.userDetails?.schoolId != null)) {
+    // if (req.userDetails?.schoolId == "student" && req.userDetails?.schoolId != null) {
+    //   res.status(409).send({
+    //     message: "You are not authorized to take this action.",
+    //   });
+    //   return;
+    // }
+
+    const studentDetails = await studentsCollection.findOne({ email: email.toLocaleLowerCase().trim() });
+
+    if (studentDetails) {
       res.status(409).send({
-        message: "You are not authorized to take this action.",
+        message: `Student with email ${email} already exist`,
       });
       return;
     }
 
-    const studentDetails = await studentsCollection.findOne({ email });
-
-
-      if (studentDetails) {
-        res.status(409).send({
-          message: "Student already exist",
-        });
-        return;
-      }
-        
-    
     const newStudent = await studentsCollection.create({
-      firstName,
-      otherNames,
-      surname,
+      firstName: firstName[0].toLocaleUpperCase() + firstName.slice(1),
+      otherNames: otherNames[0].toLocaleUpperCase() + otherNames.slice(1),
+      surname: surname[0].toLocaleUpperCase() + surname.slice(1),
       profilePic,
       studentUid: await createStudentId(schoolDetails!!.schoolUid),
       gender,
@@ -633,16 +677,24 @@ export const createStudent = async (
       stateOfOrigin,
       dateOfBirth,
       classId,
-      email,
+      email: email.toLocaleLowerCase().trim(),
       emailVerified,
-      accountStatus,
-      phoneNumber,
+      phoneNumber: phoneNumber ? normalizePhoneNumber(phoneNumber) : null,
       phoneNumberVerified,
-      password: hashPassword(password),
+      password: hashPassword(password.trim()),
       admissionYear,
       admissionTerm,
       studentTrack,
       schoolId: req.userDetails?.schoolId,
+      parentName: parentName
+        ? parentName
+            .split(" ")
+            .map((s: string) => s[0].toLocaleUpperCase() + s.slice(1)).join(" ")
+        : null,
+      parentEmail: parentEmail ? parentEmail.toLocaleLowerCase().trim() : null,
+      parentPhoneNumber: parentPhoneNumber
+        ? normalizePhoneNumber(parentPhoneNumber)
+        : null,
     });
 
     await sendEmail({
@@ -694,35 +746,39 @@ export const updateStudent = async (
       admissionTerm,
       parentName,
       parentEmail,
-      parentPhoneNumber
+      parentPhoneNumber,
     } = req.body;
 
-    const updateStudent = await studentsCollection.findByIdAndUpdate(id, {
-      firstName,
-      otherNames,
-      surname,
-      gender,
-      profilePic,
-      lgaOfOrigin,
-      stateOfOrigin,
-      dateOfBirth,
-      email,
-      emailVerified,
-      accountStatus,
-      phoneNumber,
-      phoneNumberVerified,
-      password: hashPassword(password),
-      admissionYear,
-      admissionTerm,
-      parentName,
-      parentEmail,
-      parentPhoneNumber
-    }, {
-      new: true
-    });
+    const updateStudent = await studentsCollection.findByIdAndUpdate(
+      id,
+      {
+        firstName,
+        otherNames,
+        surname,
+        gender,
+        profilePic,
+        lgaOfOrigin,
+        stateOfOrigin,
+        dateOfBirth,
+        email,
+        emailVerified,
+        accountStatus,
+        phoneNumber,
+        phoneNumberVerified,
+        password: hashPassword(password),
+        admissionYear,
+        admissionTerm,
+        parentName,
+        parentEmail,
+        parentPhoneNumber,
+      },
+      {
+        new: true,
+      }
+    );
 
     res.send({
-      result: updateStudent
+      result: updateStudent,
     });
   } catch (error) {
     next(error);
@@ -911,60 +967,37 @@ export const createStaff = async (
     }: StaffInterface = req.body;
 
     const emailAlreadyExist = await staffsCollection.findOne({
-      email,
+      email: email.toLocaleLowerCase().trim(),
     });
 
     const schoolDetails = await schoolProfileCollection.findById(schoolId);
 
     const password = "staff123";
 
-    let newStaff: any;
-
     if (emailAlreadyExist) {
-      if (emailAlreadyExist.schoolId) {
-        res.status(409).send({
-          message: `The email ${email} is already registered and is linked with a school.`,
-        });
-        return;
-      } else {
-        newStaff = await staffsCollection.findOneAndUpdate(
-          { email },
-          {
-            // firstName,
-            // otherNames,
-            // surname,
-            // gender,
-            staffUid: await createStaffId(schoolDetails!!.schoolUid),
-            phoneNumber,
-            profilePic,
-            role,
-            classTeacherOf,
-            subjectTeacherOf,
-            stateOfOrigin,
-            lgaOfOrigin,
-            schoolId,
-          }
-        );
-      }
-    } else {
-      newStaff = await staffsCollection.create({
-        firstName,
-        otherNames,
-        surname,
-        email,
-        profilePic,
-        staffUid: await createStaffId(schoolDetails!!.schoolUid),
-        password: hashPassword(password),
-        gender,
-        phoneNumber,
-        role,
-        classTeacherOf,
-        subjectTeacherOf,
-        stateOfOrigin,
-        lgaOfOrigin,
-        schoolId,
+      res.status(409).send({
+        message: `A staff with the email ${email} already exists.`,
       });
+      return;
     }
+
+    const newStaff = await staffsCollection.create({
+      firstName: firstName[0].toLocaleUpperCase() + firstName.slice(1),
+      otherNames: otherNames[0].toLocaleUpperCase() + otherNames.slice(1),
+      surname: surname[0].toLocaleUpperCase() + surname.slice(1),
+      email: email.toLocaleLowerCase().trim(),
+      profilePic,
+      staffUid: await createStaffId(schoolDetails!!.schoolUid),
+      password: hashPassword(password),
+      gender,
+      phoneNumber,
+      role,
+      classTeacherOf,
+      subjectTeacherOf,
+      stateOfOrigin,
+      lgaOfOrigin,
+      schoolId,
+    });
 
     await sendEmail({
       to: email,
@@ -997,7 +1030,7 @@ export const updateStaff = async (
   next: NextFunction
 ) => {
   try {
-    const { id } = req.body;
+    const { id } = req.params;
 
     const {
       firstName,
@@ -1005,6 +1038,7 @@ export const updateStaff = async (
       surname,
       email,
       gender,
+      profilePic,
       phoneNumber,
       role,
       classTeacherOf,
@@ -1019,6 +1053,7 @@ export const updateStaff = async (
       surname,
       email,
       gender,
+      profilePic,
       phoneNumber,
       role,
       classTeacherOf,
@@ -1056,15 +1091,18 @@ export const promoteStudents = async (
     const { studentTrack, studentIds, newClassId } = req.body;
 
     const students = await studentsCollection.find({
-      _id: { $in: studentIds }
+      _id: { $in: studentIds },
     });
-    
-    await studentsCollection.updateMany({
-      _id: { $in: studentIds }
-    }, {
-      classId: newClassId,
-      studentTrack
-    });
+
+    await studentsCollection.updateMany(
+      {
+        _id: { $in: studentIds },
+      },
+      {
+        classId: newClassId,
+        studentTrack,
+      }
+    );
 
     res.send({
       message: `The following students have been promoted: ${students

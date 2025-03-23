@@ -30,6 +30,7 @@ const announcementSchema = new Schema({
     },
     audienceType: {
         type: Array,
+        // enum: ["parent", "teacher", "student", "admin", "record-keeper"],
         default: [],
     },
     schoolId: {

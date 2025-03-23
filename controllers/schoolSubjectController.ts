@@ -35,10 +35,21 @@ export const getSubject = async (req: CustomRequest, res: Response, next: NextFu
 export const createSubject = async (req: CustomRequest, res: Response, next: NextFunction) => {
     try {
 
-        const {subject, slug, tracks} = req.body;
+        const {subject}: {subject: string} = req.body;
+
+        const slug = subject.toLocaleLowerCase().split(" ").join("-");
+
+        const subjectAlreadyExist = await subjectCollection.findOne({slug});
+
+        if(subjectAlreadyExist) {
+            res.send({
+                message: "This subject already exist"
+            });
+            return;
+        }
 
         const newSubject = await subjectCollection.create({
-            subject, slug, tracks
+            subject, slug
         });
 
         res.send({
@@ -55,11 +66,13 @@ export const updateSubject = async (req: CustomRequest, res: Response, next: Nex
 
         const {id} = req.params;
 
-        const {subject, slug} = req.body;
+        const {subject} = req.body;
+
+        const slug = subject.toLocaleLowerCase().split(" ").join("-");
 
         const ubpdatedSubject = await subjectCollection.findByIdAndUpdate(id, {
             subject, slug
-        });
+        }, {new: true});
 
         res.send({
             result: ubpdatedSubject

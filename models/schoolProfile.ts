@@ -27,6 +27,7 @@ const schoolProfileSchema = new Schema(
 
     location: {
       type: String,
+      required: true
     },
 
     schoolEmail: {
@@ -36,12 +37,6 @@ const schoolProfileSchema = new Schema(
 
     schoolPhoneNumber: {
       type: String,
-    },
-
-    schoolType: {
-      type: String,
-      enum: ["secondary-school", "primary-school"],
-      required: true
     },
 
     currentTerm: {

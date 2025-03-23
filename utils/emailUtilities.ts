@@ -1,7 +1,7 @@
 import nodemailer from "nodemailer";
 import "dotenv/config";
 type EmailOptions = {
-    to: string,
+    to: string | string[],
     subject: string,
     body: string
 }
@@ -20,7 +20,7 @@ const transporter = nodemailer.createTransport({
 async function sendEmail(emailOptions: EmailOptions) {
     const {to, subject, body} = emailOptions;
     try {
-        const result = transporter.sendMail({from: "ukokjnr@gmail.com", to, subject, html: body});
+        const result = transporter.sendMail({from: "noreply@solvpath-eportal.com", to, subject, html: body});
         return result;
     } catch (error) {
         console.log(error);

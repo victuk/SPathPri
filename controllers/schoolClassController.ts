@@ -30,6 +30,27 @@ export const getSchoolClasses = async (
   }
 };
 
+export const getClassesBySchoolId = async (
+  req: CustomRequest,
+  res: Response,
+  next: NextFunction
+) => {
+  try {
+    const {schoolId} = req.params;
+
+    const schoolClasses = await schoolClassCollection.find({
+      schoolId
+    });
+
+    res.send({
+      result: schoolClasses
+    });
+
+  } catch (error) {
+    next(error);
+  }
+}
+
 export const getSchoolClass = async (
   req: CustomRequest,
   res: Response,

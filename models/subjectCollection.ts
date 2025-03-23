@@ -9,10 +9,6 @@ const subjectSchema = new Schema({
     slug: {
         type: String,
         required: true
-    },
-    tracks: {
-        type: Array, // could be arts, science, social science, general
-        required: true
     }
 }, {timestamps: true});
 

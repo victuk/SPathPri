@@ -1,12 +1,12 @@
 import { Router, Response, Request, NextFunction } from 'express';
 import {CustomRequest, authenticatedUsersOnly} from '../middleware/authenticatedUsersOnly';
 import { getStaffDetailsBeforeLogin, getStudentDetailsBeforeLogin, staffLogin, studentLogin } from '../controllers/loginController';
-import { announcement, announcements, createAnnouncement, deleteAnnouncement, updateAnnouncement } from '../controllers/announcementsController';
+import { announcement, announcements, createAnnouncement, deleteAnnouncement, superAdminAnnouncement, updateAnnouncement } from '../controllers/announcementsController';
 import { assessment, assessments, createAssessment, deleteAssessment, updateAssessment } from '../controllers/assessmentController';
 import { assignment, assignments, createAssignment, deleteAssignment, getAssignmentTemplate, updateAssignment } from '../controllers/assignmentController';
-import { changeStudentsClass, createStaff, createStudent, deleteStudent, deleteStudentAssessment, getSingleStudentResult, getStaff, getStaffByRole, getStaffs, getStudent, getStudentByEmail, getStudentResult, getStudents, getTeacherAssessment, handOverAndRemoveStaff, promoteStudents, searchStaffByRole, updateStaff, updateStudent, updateStudentResult, updateTeacherAssessment } from '../controllers/userManagementController';
+import { changeStudentsClass, createStaff, createStudent, deleteStudent, deleteStudentAssessment, getAllSchoolStudents, getSingleStudentResult, getStaff, getStaffByRole, getStaffs, getStudent, getStudentByEmail, getStudentByUID, getStudentResult, getStudents, getTeacherAssessment, handOverAndRemoveStaff, promoteStudents, searchStaffByRole, updateStaff, updateStudent, updateStudentResult, updateTeacherAssessment } from '../controllers/userManagementController';
 import { createSubject, deleteSubject, getSubject, getSubjects, updateSubject } from '../controllers/schoolSubjectController';
-import { createSchoolClass, deleteSchoolClass, generateResult, getOneStudentResult, getResultRemark, getSchoolClass, getSchoolClasses, refreshStudentsClassSubjects, updateResultRemark, updateSchoolClass } from '../controllers/schoolClassController';
+import { createSchoolClass, deleteSchoolClass, generateResult, getClassesBySchoolId, getOneStudentResult, getResultRemark, getSchoolClass, getSchoolClasses, refreshStudentsClassSubjects, updateResultRemark, updateSchoolClass } from '../controllers/schoolClassController';
 import { createSchoolTrack, deleteSchoolTrack, getSchoolTrack, getSchoolTracks, updateSchoolTrack } from '../controllers/trackController';
 import { createScratchCards, deleteScratchCard, getScratchCard, getScratchCards, pairScratchCard, scratchCardSummaey, unpairScratchCard } from '../controllers/scratchCardController';
 import { getStaffProfile, getStudentProfile, getUserProfile } from '../controllers/profileController';
@@ -21,23 +21,30 @@ import { deleteSchoolTemplate, getSchoolTemplates, uploadSchoolTemplate } from '
 import { dashboardController } from '../controllers/dashboardController';
 import { getClassAttendance, resetAttendance, updateAttendance } from '../controllers/attendanceController';
 import { generatePDF } from '../controllers/generatePDFController';
-import { sendTextMessage } from '../utils/sendTextUtil';
+import { sendTextMessages } from '../utils/sendTextUtil';
+import roleBasedAccess from '../middleware/roleBasedAccess';
+import { sendEmail } from '../utils/emailUtilities';
 // import { refreshStudentsResult } from '../controllers/teacher/studentPositionController';
 
 const v1Routes = Router();
 
-v1Routes.get("/test-message", async (req, res, next) => {
-    try {
-        await sendTextMessage(["2348029661705", "2348035052383"], `Hello sir We wish to happily inform you about our zeal to embrace digitalization. Hence we announce our school e-portal Management system. Office of the principal`);
-        
-        res.send({
-            message: "Sent"
-        });
-    } catch (error) {
-        next(error);
-    }
+// v1Routes.get("/test-email", async (req, res, next) => {
+//     try {
 
-});
+//         await sendEmail({
+//             to: "ukokjnr@gmail.com",
+//             subject: "Test subject",
+//             body: "Test body"
+//         });
+
+//         res.send({
+//             message: "Email sent"
+//         });
+//     } catch (error) {
+//         next(error);
+//     }
+
+// });
 
 v1Routes.post("/student-login", studentLogin);
 v1Routes.post("/staff-login", staffLogin);
@@ -57,6 +64,9 @@ v1Routes.get("/announcement/:id", announcement);
 v1Routes.post("/announcement", createAnnouncement);
 v1Routes.put("/announcement/:id", updateAnnouncement);
 v1Routes.delete("/announcement/:id", deleteAnnouncement);
+
+// Super admin announcement
+v1Routes.post("/super-admin-announcement", superAdminAnnouncement);
 
 // Assessment routes
 v1Routes.post("/assessments", assessments);
@@ -84,32 +94,34 @@ v1Routes.get("/staffs/:schoolId/:page/:limit", getStaffs);
 v1Routes.get("/staffs-by-role/:role/:page/:limit", getStaffByRole);
 v1Routes.post("/search-staffs-by-role", searchStaffByRole);
 v1Routes.get("/staff/:id", getStaff);
-v1Routes.post("/staff", createStaff);
+v1Routes.post("/staff", roleBasedAccess(["admin", "super-admin"]), createStaff);
 v1Routes.put("/staff/:id", updateStaff);
 v1Routes.delete("/staff/:id", handOverAndRemoveStaff);
 
 // Student routes
 v1Routes.post("/students/:page/:limit", getStudents);
 v1Routes.get("/student/:id", getStudent);
-v1Routes.post("/student", createStudent);
+v1Routes.post("/student", roleBasedAccess(["admin", "super-admin"]), createStudent);
 v1Routes.get("/student-by-email/:email", getStudentByEmail);
-v1Routes.get("/student", createStudent);
+v1Routes.post("/student-by-uid", getStudentByUID);
+// v1Routes.get("/student", createStudent);
 v1Routes.put("/student/:id", updateStudent);
 v1Routes.delete("/student/:id", deleteStudent);
+v1Routes.get("/all-school-students", getAllSchoolStudents);
 
 // Student result
 v1Routes.post(`/student-result/:page/:limit`, getStudentResult);
 v1Routes.get("/single-student-result/:page/:limit", getSingleStudentResult);
 v1Routes.put(`/student-result/:recordId`, updateStudentResult);
-v1Routes.put("/students-class", changeStudentsClass);
-v1Routes.put("/promote-students", promoteStudents);
+v1Routes.put("/students-class", roleBasedAccess(["admin", "teacher"]), changeStudentsClass);
+v1Routes.put("/promote-students", roleBasedAccess(["admin", "teacher"]), promoteStudents);
 v1Routes.put("/generate-result", generateResult);
 v1Routes.put("/refresh-students-subject", refreshStudentsClassSubjects);
 
 // Teacher Assessment
-v1Routes.post("/teacher-assessments", getTeacherAssessment);
-v1Routes.put("/teacher-assessment", updateTeacherAssessment);
-v1Routes.delete("/teacher-assessment/:studentId/:subjectId/:classId", deleteStudentAssessment);
+v1Routes.post("/teacher-assessments", roleBasedAccess(["teacher"]), getTeacherAssessment);
+v1Routes.put("/teacher-assessment", roleBasedAccess(["teacher"]), updateTeacherAssessment);
+v1Routes.delete("/teacher-assessment/:studentId/:subjectId/:classId", roleBasedAccess(["teacher"]), deleteStudentAssessment);
 
 // Subject routes
 v1Routes.get("/subjects", getSubjects);
@@ -135,6 +147,7 @@ v1Routes.delete("/time-table/:id", deleteTimeTable);
 
 // Student's class
 v1Routes.get("/classes", getSchoolClasses);
+v1Routes.get("/classes-by-school-id/:schoolId", getClassesBySchoolId);
 v1Routes.get("/class/:id", getSchoolClass);
 v1Routes.post("/class", createSchoolClass);
 v1Routes.put("/class/:id", updateSchoolClass);

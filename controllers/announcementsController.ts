@@ -1,8 +1,10 @@
 import { NextFunction, Response } from 'express';
 import { CustomRequest } from '../middleware/authenticatedUsersOnly';
 import { announcementCollection } from '../models/announcementModel';
-import { staffsCollection } from '../models/staffs';
-import { studentsCollection } from '../models/students';
+import { staffsCollection, staffsCollectionType } from '../models/staffs';
+import { studentsCollection, studentsCollectionType } from '../models/students';
+import { sendEmail } from '../utils/emailUtilities';
+import { sendTextMessages } from '../utils/sendTextUtil';
 
 async function announcements(req: CustomRequest, res: Response, next: NextFunction) {
 
@@ -64,6 +66,8 @@ async function createAnnouncement(req: CustomRequest, res: Response, next: NextF
             audienceType
         } = req.body;
 
+        // type AudienceType = "parent" | "teacher" | "student" | "admin" | "record-keeper";
+
         const staffDetails = await staffsCollection.findById(req.userDetails?.userId);
 
         if(!staffDetails?.schoolId) {
@@ -81,6 +85,53 @@ async function createAnnouncement(req: CustomRequest, res: Response, next: NextF
             audienceType,
             schoolId: staffDetails?.schoolId
         });
+
+        const allRecepient = [];
+        
+        let staffsToSendMessagesTo: staffsCollectionType[] = [];
+        let studentsToSendMessagesTo: studentsCollectionType[] = [];
+        
+        if(audienceType.includes("admin") | audienceType.includes("record-keeper") | audienceType.includes("teacher")) {
+            staffsToSendMessagesTo = await staffsCollection.find({role: {$in: audienceType}});
+            for(let i = 0; i < staffsToSendMessagesTo.length; i++) {
+                allRecepient.push({
+                    email: staffsToSendMessagesTo[i].email,
+                    phoneNumber: staffsToSendMessagesTo[i].phoneNumber
+                });
+            }
+        }
+        
+        if(audienceType.includes("student") | audienceType.includes("parent")) {
+            studentsToSendMessagesTo = await studentsCollection.find({});
+            if(audienceType.includes("student")) {
+                for(let i = 0; i < studentsToSendMessagesTo.length; i++) {
+                    allRecepient.push({
+                        email: studentsToSendMessagesTo[i].email,
+                        phoneNumber: studentsToSendMessagesTo[i].phoneNumber
+                    });
+                }
+            }
+
+            if(audienceType.includes("parent")) {
+                for(let i = 0; i < studentsToSendMessagesTo.length; i++) {
+                    allRecepient.push({
+                        email: studentsToSendMessagesTo[i].parentEmail,
+                        phoneNumber: studentsToSendMessagesTo[i].parentPhoneNumber
+                    });
+                }
+            }
+
+        }
+        
+            await sendEmail({
+                to: allRecepient.filter(e => e.email != null).map(e => e.email) as string[],
+                subject: announcementTitle,
+                body: announcement
+            });
+       
+            const phoneNumbers = allRecepient.filter(e => e.phoneNumber != null).map(e => e.phoneNumber) as string[];
+            await sendTextMessages(phoneNumbers, announcement);
+        
 
         res.send({
             message: "Announcement uploaded successfully",
@@ -137,10 +188,85 @@ async function deleteAnnouncement(req: CustomRequest, res: Response, next: NextF
     }
 }
 
+const superAdminAnnouncement = async (req: CustomRequest, res: Response, next: NextFunction) => {
+    try {
+        
+        const {
+            title,
+            message,
+            sendAsEmail,
+            sendAsText,
+            sendToStaff,
+            sendToStudents,
+            sendToParents
+        } = req.body;
+
+        
+        const allRecepient = [];
+        
+        let staffsToSendMessagesTo: staffsCollectionType[] = [];
+        let studentsToSendMessagesTo: studentsCollectionType[] = [];
+        
+        if(sendToStaff) {
+            staffsToSendMessagesTo = await staffsCollection.find({});
+            for(let i = 0; i < staffsToSendMessagesTo.length; i++) {
+                allRecepient.push({
+                    email: staffsToSendMessagesTo[i].email,
+                    phoneNumber: staffsToSendMessagesTo[i].phoneNumber
+                });
+            }
+        }
+        
+        if(sendToStudents || sendToParents) {
+            studentsToSendMessagesTo = await studentsCollection.find({});
+            if(sendToStudents) {
+                for(let i = 0; i < studentsToSendMessagesTo.length; i++) {
+                    allRecepient.push({
+                        email: studentsToSendMessagesTo[i].email,
+                        phoneNumber: studentsToSendMessagesTo[i].phoneNumber
+                    });
+                }
+            }
+
+            if(sendToParents) {
+                for(let i = 0; i < studentsToSendMessagesTo.length; i++) {
+                    allRecepient.push({
+                        email: studentsToSendMessagesTo[i].parentEmail,
+                        phoneNumber: studentsToSendMessagesTo[i].parentPhoneNumber
+                    });
+                }
+            }
+
+        }
+        
+        
+        if(sendAsEmail) {
+            await sendEmail({
+                to: allRecepient.filter(e => e.email != null).map(e => e.email) as string[],
+                subject: title,
+                body: message
+            });
+        }
+
+        if(sendAsText) {
+            const phoneNumbers = allRecepient.filter(e => e.phoneNumber != null).map(e => e.phoneNumber) as string[];
+            await sendTextMessages(phoneNumbers, message);
+        }
+        
+        res.send({
+            result: "Emails and text sent."
+        });
+
+    } catch (error) {
+        next(error);
+    }
+}
+
 export {
     announcements,
     announcement,
     createAnnouncement,
     updateAnnouncement,
-    deleteAnnouncement
+    deleteAnnouncement,
+    superAdminAnnouncement
 };

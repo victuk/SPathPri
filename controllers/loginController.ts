@@ -97,14 +97,7 @@ async function staffLogin(
 
     const staffDetails: any = await staffsCollection
       .findOne({
-        $or: [
-          {
-            email,
-          },
-          {
-            staffUid: email,
-          },
-        ],
+        email: email.toLocaleLowerCase().trim(),
       })
       .populate("schoolId", "schoolName schoolLogo schoolMotto currentTerm currentYear");
 
