@@ -4,7 +4,7 @@ import { getStaffDetailsBeforeLogin, getStudentDetailsBeforeLogin, staffLogin, s
 import { announcement, announcements, createAnnouncement, deleteAnnouncement, superAdminAnnouncement, updateAnnouncement } from '../controllers/announcementsController';
 import { assessment, assessments, createAssessment, deleteAssessment, updateAssessment } from '../controllers/assessmentController';
 import { assignment, assignments, createAssignment, deleteAssignment, getAssignmentTemplate, updateAssignment } from '../controllers/assignmentController';
-import { approveOrDeclineResultUpdate, changeStudentsClass, createStaff, createStudent, deleteStudent, deleteStudentAssessment, getAllSchoolStudents, getApprovalList, getApprovalRecord, getSingleStudentResult, getStaff, getStaffByRole, getStaffs, getStudent, getStudentByEmail, getStudentByUID, getStudentResult, getStudents, getTeacherAssessment, promoteStudents, removeStaffFromSchool, removeStudentFromSchool, resultUpdateRequest, searchStaffByRole, updateStaff, updateStudent, updateStudentResult, updateTeacherAssessment } from '../controllers/userManagementController';
+import { approveOrDeclineResultUpdate, changeStudentsClass, createStaff, createStudent, CSVStaffByRole, deleteStudent, deleteStudentAssessment, getAllSchoolStudents, getApprovalList, getApprovalRecord, getSingleStudentResult, getStaff, getStaffByRole, getStaffs, getStudent, getStudentByEmail, getStudentByUID, getStudentResult, getStudents, getTeacherAssessment, promoteStudents, removeStaffFromSchool, removeStudentFromSchool, resultUpdateRequest, searchStaffByRole, updateStaff, updateStudent, updateStudentResult, updateTeacherAssessment } from '../controllers/userManagementController';
 import { createSubject, deleteSubject, getSubject, getSubjects, updateSubject } from '../controllers/schoolSubjectController';
 import { createSchoolClass, deleteSchoolClass, generateResult, getClassesBySchoolId, getOneStudentResult, getResultRemark, getSchoolClass, getSchoolClasses, refreshStudentsClassSubjects, updateResultRemark, updateSchoolClass } from '../controllers/schoolClassController';
 import { createSchoolTrack, deleteSchoolTrack, getSchoolTrack, getSchoolTracks, updateSchoolTrack } from '../controllers/trackController';
@@ -118,6 +118,7 @@ v1Routes.delete("/assignment/:id", deleteAssignment);
 
 // Staff routes
 v1Routes.get("/staffs/:schoolId/:page/:limit", getStaffs);
+v1Routes.get("/staffs-for-csv/:role", CSVStaffByRole);
 v1Routes.get("/staffs-by-role/:role/:page/:limit", getStaffByRole);
 v1Routes.post("/search-staffs-by-role", searchStaffByRole);
 v1Routes.get("/staff/:id", getStaff);

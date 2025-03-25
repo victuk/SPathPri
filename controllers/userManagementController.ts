@@ -394,7 +394,7 @@ export const resultUpdateRequest = async (
       testOne,
       testTwo,
       testThree,
-      exam
+      exam,
     } = req.body;
 
     const requestAlreadyExist =
@@ -515,7 +515,7 @@ export const approveOrDeclineResultUpdate = async (
     }
 
     res.send({
-      message: `Update request ${verdict}d successfully.`
+      message: `Update request ${verdict}d successfully.`,
     });
   } catch (error) {
     next(error);
@@ -528,60 +528,70 @@ export const getApprovalList = async (
   next: NextFunction
 ) => {
   try {
-    
-    const {status, page, limit} = req.params;
+    const { status, page, limit } = req.params;
 
     let result: any;
 
-    if(req.userDetails?.role == "teacher") {
-      if(status == "all") {
-        result = await pendingStudentsAssessmentRequestCollection.paginate({
-          teacherId: req.userDetails?.userId,
-          schoolId: req.userDetails?.schoolId
-        }, {
-          page: page ? parseInt(page) : 1,
-          limit: limit ? parseInt(limit) : 10
-        });
+    if (req.userDetails?.role == "teacher") {
+      if (status == "all") {
+        result = await pendingStudentsAssessmentRequestCollection.paginate(
+          {
+            teacherId: req.userDetails?.userId,
+            schoolId: req.userDetails?.schoolId,
+          },
+          {
+            page: page ? parseInt(page) : 1,
+            limit: limit ? parseInt(limit) : 10,
+          }
+        );
       } else {
-        result = await pendingStudentsAssessmentRequestCollection.paginate({
-          teacherId: req.userDetails?.userId,
-          status,
-          schoolId: req.userDetails?.schoolId
-        }, {
-          page: page ? parseInt(page) : 1,
-          limit: limit ? parseInt(limit) : 10
-        });
+        result = await pendingStudentsAssessmentRequestCollection.paginate(
+          {
+            teacherId: req.userDetails?.userId,
+            status,
+            schoolId: req.userDetails?.schoolId,
+          },
+          {
+            page: page ? parseInt(page) : 1,
+            limit: limit ? parseInt(limit) : 10,
+          }
+        );
       }
     } else {
-      if(status == "all") {
-        result = await pendingStudentsAssessmentRequestCollection.paginate({
-          requestMadeBy: req.userDetails?.userId,
-          schoolId: req.userDetails?.schoolId
-        }, {
-          page: page ? parseInt(page) : 1,
-          limit: limit ? parseInt(limit) : 10
-        });
+      if (status == "all") {
+        result = await pendingStudentsAssessmentRequestCollection.paginate(
+          {
+            requestMadeBy: req.userDetails?.userId,
+            schoolId: req.userDetails?.schoolId,
+          },
+          {
+            page: page ? parseInt(page) : 1,
+            limit: limit ? parseInt(limit) : 10,
+          }
+        );
       } else {
-        result = await pendingStudentsAssessmentRequestCollection.paginate({
-          requestMadeBy: req.userDetails?.userId,
-          status,
-          schoolId: req.userDetails?.schoolId
-        }, {
-          page: page ? parseInt(page) : 1,
-          limit: limit ? parseInt(limit) : 10
-        });
+        result = await pendingStudentsAssessmentRequestCollection.paginate(
+          {
+            requestMadeBy: req.userDetails?.userId,
+            status,
+            schoolId: req.userDetails?.schoolId,
+          },
+          {
+            page: page ? parseInt(page) : 1,
+            limit: limit ? parseInt(limit) : 10,
+          }
+        );
       }
     }
 
     res.send({
       message: "Approval list retrieved successfully",
-      result
+      result,
     });
-
   } catch (error) {
     next(error);
   }
-}
+};
 
 export const getApprovalRecord = async (
   req: CustomRequest,
@@ -589,25 +599,24 @@ export const getApprovalRecord = async (
   next: NextFunction
 ) => {
   try {
-    
-    const {id} = req.params;
+    const { id } = req.params;
 
-    const result = await pendingStudentsAssessmentRequestCollection.findById(id)
-    .populate("studentId")
-    .populate("teacherId")
-    .populate("requestMadeBy")
-    .populate("subjectId")
-    .populate("classId")
-    .populate("studentAssessmentId");
+    const result = await pendingStudentsAssessmentRequestCollection
+      .findById(id)
+      .populate("studentId")
+      .populate("teacherId")
+      .populate("requestMadeBy")
+      .populate("subjectId")
+      .populate("classId")
+      .populate("studentAssessmentId");
 
     res.send({
-      result
+      result,
     });
-
   } catch (error) {
     next(error);
   }
-}
+};
 
 export const getTeacherAssessment = async (
   req: CustomRequest,
@@ -787,7 +796,7 @@ export const getAllSchoolStudents = async (
   try {
     const students = await studentsCollection
       .find({ schoolId: req.userDetails?.schoolId })
-      .populate("classId");
+      .populate("classId").sort({firstName: -1});
 
     res.send({ result: students });
   } catch (error) {
@@ -1027,19 +1036,17 @@ export const removeStudentFromSchool = async (
   next: NextFunction
 ) => {
   try {
-    
-    const {id} = req.params;
+    const { id } = req.params;
 
-    await studentsCollection.findByIdAndUpdate(id, {schoolId: null});
+    await studentsCollection.findByIdAndUpdate(id, { schoolId: null });
 
     res.send({
-      message: "Student removed from school Successfully"
+      message: "Student removed from school Successfully",
     });
-
   } catch (error) {
     next(error);
   }
-}
+};
 
 export const deleteStudent = async (
   req: CustomRequest,
@@ -1053,7 +1060,9 @@ export const deleteStudent = async (
     //   schoolId: null,
     // });
 
-    const deletedStudent = await studentsCollection.findByIdAndUpdate(id, {schoolId: null});
+    const deletedStudent = await studentsCollection.findByIdAndUpdate(id, {
+      schoolId: null,
+    });
 
     await resultCollection.deleteMany({ studentId: id });
 
@@ -1135,19 +1144,23 @@ export const CSVStaffByRole = async (
   next: NextFunction
 ) => {
   try {
-    
     const { role } = req.params;
 
-    const staffList = await staffsCollection.find({ role, schoolId: req.userDetails?.role });
+    const staffList = await staffsCollection
+      .find({ role, schoolId: req.userDetails?.schoolId })
+      .populate("classTeacherOf")
+      .populate("subjectTeacherOf.classId")
+      .populate("subjectTeacherOf.subjectId")
+      .populate("schoolId")
+      .sort({ firstName: -1 });
 
     res.send({
       result: staffList,
     });
-
   } catch (error) {
     next(error);
   }
-}
+};
 
 export const searchStaffByRole = async (
   req: CustomRequest,
@@ -1360,15 +1373,14 @@ export const removeStaffFromSchool = async (
   next: NextFunction
 ) => {
   try {
-
-    const {id} = req.params;
+    const { id } = req.params;
 
     await staffsCollection.findByIdAndUpdate(id, {
-      schoolId: null
+      schoolId: null,
     });
 
     res.send({
-      message: "Staff deleted successfully"
+      message: "Staff deleted successfully",
     });
   } catch (error) {
     next(error);
