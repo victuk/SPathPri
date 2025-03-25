@@ -1,4 +1,4 @@
-import { NextFunction, Response } from "express";
+import { NextFunction, response, Response } from "express";
 import { CustomRequest } from "../middleware/authenticatedUsersOnly";
 import { studentsCollection } from "../models/students";
 import { staffsCollection } from "../models/staffs";
@@ -13,6 +13,9 @@ import { createStaffId, createStudentId } from "../utils/idCreatorUtils";
 import { remarkAndGrade } from "../utils/assessmentRemarkUtil";
 import { classPositionAndRemarksCollection } from "../models/classPositionAndRemarksModel";
 import { normalizePhoneNumber } from "../utils/normalizePhoneNumber";
+import { studentPositionAndRemark } from "../models/positionAndRemarksModel";
+import { AttendanceCollection } from "../models/studentsAttendance";
+import { pendingStudentsAssessmentRequestCollection } from "../models/pendingStudentsAssessmentRequest";
 
 export const getStudents = async (
   req: CustomRequest,
@@ -376,6 +379,236 @@ export const updateStudentResult = async (
   }
 };
 
+export const resultUpdateRequest = async (
+  req: CustomRequest,
+  res: Response,
+  next: NextFunction
+) => {
+  try {
+    const {
+      studentId,
+      teacherId,
+      subjectId,
+      classId,
+      studentAssessmentId,
+      testOne,
+      testTwo,
+      testThree,
+      exam
+    } = req.body;
+
+    const requestAlreadyExist =
+      await pendingStudentsAssessmentRequestCollection.findOne({
+        studentAssessmentId,
+        requestMadeBy: req.userDetails?.userId,
+      });
+
+    const total =
+      Math.abs(testOne) +
+      Math.abs(testTwo) +
+      Math.abs(testThree) +
+      Math.abs(exam);
+
+    if (total > 100) {
+      res.status(400).send({
+        message: "The total score value is greater than 100",
+      });
+      return;
+    }
+
+    if (requestAlreadyExist) {
+      await pendingStudentsAssessmentRequestCollection.findOneAndUpdate(
+        {
+          studentAssessmentId,
+          requestMadeBy: req.userDetails?.userId,
+        },
+        {
+          testOne,
+          testTwo,
+          testThree,
+          exam,
+          total,
+        }
+      );
+    } else {
+      await pendingStudentsAssessmentRequestCollection.create({
+        requestMadeBy: req.userDetails?.userId,
+        studentId,
+        teacherId,
+        subjectId,
+        classId,
+        studentAssessmentId,
+        testOne,
+        testTwo,
+        testThree,
+        exam,
+        schoolId: req.userDetails?.schoolId,
+      });
+    }
+
+    res.send({
+      message: "Request result update submitted successfully.",
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const approveOrDeclineResultUpdate = async (
+  req: CustomRequest,
+  res: Response,
+  next: NextFunction
+) => {
+  try {
+    const { requestId, verdict } = req.body;
+
+    if (verdict == "approve") {
+      const result =
+        await pendingStudentsAssessmentRequestCollection.findByIdAndUpdate(
+          requestId,
+          {
+            status: verdict,
+          },
+          { new: true }
+        );
+
+      if (!result) {
+        res.status(404).send({
+          message: "Record not found",
+        });
+        return;
+      }
+
+      const total =
+        Math.abs(result.testOne) +
+        Math.abs(result.testTwo) +
+        Math.abs(result.testThree) +
+        Math.abs(result.exam);
+
+      if (total > 100) {
+        res.status(400).send({
+          message: "The total score value is greater than 100",
+        });
+        return;
+      }
+
+      const remarkAndGradeResult = remarkAndGrade(total);
+
+      await resultCollection.findByIdAndUpdate(result.studentAssessmentId, {
+        testOne: result.testOne,
+        testTwo: result.testTwo,
+        testThree: result.testThree,
+        examScore: result.exam,
+        testsAndExamTotal: total,
+        grade: remarkAndGradeResult.grade,
+        remark: remarkAndGradeResult.remark,
+        subjectAverage: total / 2,
+      });
+    } else {
+      await pendingStudentsAssessmentRequestCollection.findByIdAndUpdate(
+        requestId,
+        {
+          status: verdict,
+        },
+        { new: true }
+      );
+    }
+
+    res.send({
+      message: `Update request ${verdict}d successfully.`
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const getApprovalList = async (
+  req: CustomRequest,
+  res: Response,
+  next: NextFunction
+) => {
+  try {
+    
+    const {status, page, limit} = req.params;
+
+    let result: any;
+
+    if(req.userDetails?.role == "teacher") {
+      if(status == "all") {
+        result = await pendingStudentsAssessmentRequestCollection.paginate({
+          teacherId: req.userDetails?.userId,
+          schoolId: req.userDetails?.schoolId
+        }, {
+          page: page ? parseInt(page) : 1,
+          limit: limit ? parseInt(limit) : 10
+        });
+      } else {
+        result = await pendingStudentsAssessmentRequestCollection.paginate({
+          teacherId: req.userDetails?.userId,
+          status,
+          schoolId: req.userDetails?.schoolId
+        }, {
+          page: page ? parseInt(page) : 1,
+          limit: limit ? parseInt(limit) : 10
+        });
+      }
+    } else {
+      if(status == "all") {
+        result = await pendingStudentsAssessmentRequestCollection.paginate({
+          requestMadeBy: req.userDetails?.userId,
+          schoolId: req.userDetails?.schoolId
+        }, {
+          page: page ? parseInt(page) : 1,
+          limit: limit ? parseInt(limit) : 10
+        });
+      } else {
+        result = await pendingStudentsAssessmentRequestCollection.paginate({
+          requestMadeBy: req.userDetails?.userId,
+          status,
+          schoolId: req.userDetails?.schoolId
+        }, {
+          page: page ? parseInt(page) : 1,
+          limit: limit ? parseInt(limit) : 10
+        });
+      }
+    }
+
+    res.send({
+      message: "Approval list retrieved successfully",
+      result
+    });
+
+  } catch (error) {
+    next(error);
+  }
+}
+
+export const getApprovalRecord = async (
+  req: CustomRequest,
+  res: Response,
+  next: NextFunction
+) => {
+  try {
+    
+    const {id} = req.params;
+
+    const result = await pendingStudentsAssessmentRequestCollection.findById(id)
+    .populate("studentId")
+    .populate("teacherId")
+    .populate("requestMadeBy")
+    .populate("subjectId")
+    .populate("classId")
+    .populate("studentAssessmentId");
+
+    res.send({
+      result
+    });
+
+  } catch (error) {
+    next(error);
+  }
+}
+
 export const getTeacherAssessment = async (
   req: CustomRequest,
   res: Response,
@@ -552,15 +785,15 @@ export const getAllSchoolStudents = async (
   next: NextFunction
 ) => {
   try {
-    
-    const students = await studentsCollection.find({schoolId: req.userDetails?.schoolId}).populate("classId");
+    const students = await studentsCollection
+      .find({ schoolId: req.userDetails?.schoolId })
+      .populate("classId");
 
-    res.send({result: students});
-
+    res.send({ result: students });
   } catch (error) {
     next(error);
   }
-}
+};
 
 export const getStudentByEmail = async (
   req: CustomRequest,
@@ -597,7 +830,7 @@ export const getStudentByUID = async (
 
     const student = await studentsCollection
       .findOne(
-        { studentUid:  uid },
+        { studentUid: uid },
         "firstName otherNames surname gender profilePic email classId schoolId"
       )
       .populate("schoolId", "schoolName schoolUid schoolLogo")
@@ -657,7 +890,9 @@ export const createStudent = async (
     //   return;
     // }
 
-    const studentDetails = await studentsCollection.findOne({ email: email.toLocaleLowerCase().trim() });
+    const studentDetails = await studentsCollection.findOne({
+      email: email.toLocaleLowerCase().trim(),
+    });
 
     if (studentDetails) {
       res.status(409).send({
@@ -689,7 +924,8 @@ export const createStudent = async (
       parentName: parentName
         ? parentName
             .split(" ")
-            .map((s: string) => s[0].toLocaleUpperCase() + s.slice(1)).join(" ")
+            .map((s: string) => s[0].toLocaleUpperCase() + s.slice(1))
+            .join(" ")
         : null,
       parentEmail: parentEmail ? parentEmail.toLocaleLowerCase().trim() : null,
       parentPhoneNumber: parentPhoneNumber
@@ -785,17 +1021,45 @@ export const updateStudent = async (
   }
 };
 
+export const removeStudentFromSchool = async (
+  req: CustomRequest,
+  res: Response,
+  next: NextFunction
+) => {
+  try {
+    
+    const {id} = req.params;
+
+    await studentsCollection.findByIdAndUpdate(id, {schoolId: null});
+
+    res.send({
+      message: "Student removed from school Successfully"
+    });
+
+  } catch (error) {
+    next(error);
+  }
+}
+
 export const deleteStudent = async (
   req: CustomRequest,
   res: Response,
   next: NextFunction
 ) => {
   try {
-    const { id } = req.body;
+    const { id } = req.params;
 
-    const deletedStudent = await studentsCollection.findByIdAndUpdate(id, {
-      schoolId: null,
-    });
+    // const deletedStudent = await studentsCollection.findByIdAndUpdate(id, {
+    //   schoolId: null,
+    // });
+
+    const deletedStudent = await studentsCollection.findByIdAndUpdate(id, {schoolId: null});
+
+    await resultCollection.deleteMany({ studentId: id });
+
+    await studentPositionAndRemark.deleteMany({ studentID: id });
+
+    await AttendanceCollection.deleteMany({ studentId: id });
 
     res.send({
       result: deletedStudent,
@@ -864,6 +1128,26 @@ export const getStaffByRole = async (
     next(error);
   }
 };
+
+export const CSVStaffByRole = async (
+  req: CustomRequest,
+  res: Response,
+  next: NextFunction
+) => {
+  try {
+    
+    const { role } = req.params;
+
+    const staffList = await staffsCollection.find({ role, schoolId: req.userDetails?.role });
+
+    res.send({
+      result: staffList,
+    });
+
+  } catch (error) {
+    next(error);
+  }
+}
 
 export const searchStaffByRole = async (
   req: CustomRequest,
@@ -1070,13 +1354,22 @@ export const updateStaff = async (
   }
 };
 
-export const handOverAndRemoveStaff = async (
+export const removeStaffFromSchool = async (
   req: CustomRequest,
   res: Response,
   next: NextFunction
 ) => {
   try {
-    res.sendStatus(200);
+
+    const {id} = req.params;
+
+    await staffsCollection.findByIdAndUpdate(id, {
+      schoolId: null
+    });
+
+    res.send({
+      message: "Staff deleted successfully"
+    });
   } catch (error) {
     next(error);
   }

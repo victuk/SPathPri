@@ -4,11 +4,11 @@ import { getStaffDetailsBeforeLogin, getStudentDetailsBeforeLogin, staffLogin, s
 import { announcement, announcements, createAnnouncement, deleteAnnouncement, superAdminAnnouncement, updateAnnouncement } from '../controllers/announcementsController';
 import { assessment, assessments, createAssessment, deleteAssessment, updateAssessment } from '../controllers/assessmentController';
 import { assignment, assignments, createAssignment, deleteAssignment, getAssignmentTemplate, updateAssignment } from '../controllers/assignmentController';
-import { changeStudentsClass, createStaff, createStudent, deleteStudent, deleteStudentAssessment, getAllSchoolStudents, getSingleStudentResult, getStaff, getStaffByRole, getStaffs, getStudent, getStudentByEmail, getStudentByUID, getStudentResult, getStudents, getTeacherAssessment, handOverAndRemoveStaff, promoteStudents, searchStaffByRole, updateStaff, updateStudent, updateStudentResult, updateTeacherAssessment } from '../controllers/userManagementController';
+import { approveOrDeclineResultUpdate, changeStudentsClass, createStaff, createStudent, deleteStudent, deleteStudentAssessment, getAllSchoolStudents, getApprovalList, getApprovalRecord, getSingleStudentResult, getStaff, getStaffByRole, getStaffs, getStudent, getStudentByEmail, getStudentByUID, getStudentResult, getStudents, getTeacherAssessment, promoteStudents, removeStaffFromSchool, removeStudentFromSchool, resultUpdateRequest, searchStaffByRole, updateStaff, updateStudent, updateStudentResult, updateTeacherAssessment } from '../controllers/userManagementController';
 import { createSubject, deleteSubject, getSubject, getSubjects, updateSubject } from '../controllers/schoolSubjectController';
 import { createSchoolClass, deleteSchoolClass, generateResult, getClassesBySchoolId, getOneStudentResult, getResultRemark, getSchoolClass, getSchoolClasses, refreshStudentsClassSubjects, updateResultRemark, updateSchoolClass } from '../controllers/schoolClassController';
 import { createSchoolTrack, deleteSchoolTrack, getSchoolTrack, getSchoolTracks, updateSchoolTrack } from '../controllers/trackController';
-import { createScratchCards, deleteScratchCard, getScratchCard, getScratchCards, pairScratchCard, scratchCardSummaey, unpairScratchCard } from '../controllers/scratchCardController';
+import { createScratchCards, deleteScratchCard, getScratchCard, getScratchCards, pairAllStudents, pairScratchCard, scratchCardSummaey, unpairScratchCard } from '../controllers/scratchCardController';
 import { getStaffProfile, getStudentProfile, getUserProfile } from '../controllers/profileController';
 import { fileUpload } from '../controllers/fileController';
 import { multerUpload } from '../utils/cloudinaryUtils';
@@ -25,26 +25,53 @@ import { sendTextMessages } from '../utils/sendTextUtil';
 import roleBasedAccess from '../middleware/roleBasedAccess';
 import { sendEmail } from '../utils/emailUtilities';
 // import { refreshStudentsResult } from '../controllers/teacher/studentPositionController';
+import puppeteer from "puppeteer";
+import fs from "fs";
+import path from "path";
+import { v4 } from "uuid";
+import { studentsCollection } from '../models/students';
+import { StudentsScratchCardCollection } from '../models/studentsScratchCard';
+import { schoolProfileCollection } from '../models/schoolProfile';
 
 const v1Routes = Router();
 
-// v1Routes.get("/test-email", async (req, res, next) => {
-//     try {
+v1Routes.get("/pair-all-students", async (req, res, next) => {
+    try {
 
-//         await sendEmail({
-//             to: "ukokjnr@gmail.com",
-//             subject: "Test subject",
-//             body: "Test body"
-//         });
+      // const students = await studentsCollection.find({});
+      // const studentScratchCard = await StudentsScratchCardCollection.find({});
 
-//         res.send({
-//             message: "Email sent"
-//         });
-//     } catch (error) {
-//         next(error);
-//     }
+      // for(let i = 0; i < students.length; i++) {
+      //   const studentHasScratchCard = studentScratchCard.find(s => (s.studentId).toString() == (students[i]._id).toString());
 
-// });
+      //   if(!studentHasScratchCard) {
+      //     const unpairedScratchCard = studentScratchCard.find(s => (s.studentId).toString() == null);
+
+      //     if(unpairedScratchCard) {
+      //       await StudentsScratchCardCollection.findByIdAndUpdate(unpairedScratchCard._id, {
+      //         studentId: students[i]._id
+      //       });
+      //     } else {
+      //       const schoolDetails = await schoolProfileCollection.findById(students[i].schoolId);
+      //       await StudentsScratchCardCollection.create({
+      //         studentId: students[i]._id,
+      //         scratchCardId: v4().split("-")[4],
+      //         dateIssued: new Date(),
+      //         schoolId: students[i].schoolId,
+      //         year: schoolDetails?.currentYear,
+      //         term: schoolDetails?.currentTerm
+      //       });
+      //     }
+      //   }
+      // }
+      
+      // res.send();
+
+    } catch (error) {
+        next(error);
+    }
+
+});
 
 v1Routes.post("/student-login", studentLogin);
 v1Routes.post("/staff-login", staffLogin);
@@ -79,7 +106,7 @@ v1Routes.get("/teacher-assessment");
 
 // Term Result
 v1Routes.post("/student-term-result", getOneStudentResult);
-v1Routes.get("/result-remarks/:classId?", getResultRemark);
+v1Routes.get("/result-remarks/:classId", getResultRemark);
 v1Routes.put("/result-remark/:positionId", updateResultRemark);
 
 // Assignment routes
@@ -96,7 +123,7 @@ v1Routes.post("/search-staffs-by-role", searchStaffByRole);
 v1Routes.get("/staff/:id", getStaff);
 v1Routes.post("/staff", roleBasedAccess(["admin", "super-admin"]), createStaff);
 v1Routes.put("/staff/:id", updateStaff);
-v1Routes.delete("/staff/:id", handOverAndRemoveStaff);
+v1Routes.delete("/staff/:id", removeStaffFromSchool);
 
 // Student routes
 v1Routes.post("/students/:page/:limit", getStudents);
@@ -106,6 +133,7 @@ v1Routes.get("/student-by-email/:email", getStudentByEmail);
 v1Routes.post("/student-by-uid", getStudentByUID);
 // v1Routes.get("/student", createStudent);
 v1Routes.put("/student/:id", updateStudent);
+v1Routes.delete("/remove-from-school/:id", removeStudentFromSchool);
 v1Routes.delete("/student/:id", deleteStudent);
 v1Routes.get("/all-school-students", getAllSchoolStudents);
 
@@ -117,6 +145,12 @@ v1Routes.put("/students-class", roleBasedAccess(["admin", "teacher"]), changeStu
 v1Routes.put("/promote-students", roleBasedAccess(["admin", "teacher"]), promoteStudents);
 v1Routes.put("/generate-result", generateResult);
 v1Routes.put("/refresh-students-subject", refreshStudentsClassSubjects);
+
+// Change approval routes
+v1Routes.get("/approval-list/:status/:page/:limit", roleBasedAccess(["teacher", "record-keeper", "admin"]), getApprovalList);
+v1Routes.get("/approval-record/:id", roleBasedAccess(["teacher", "record-keeper", "admin"]), getApprovalRecord);
+v1Routes.post("/create-request", roleBasedAccess(["record-keeper", "admin"]), resultUpdateRequest);
+v1Routes.put("/approve-or-decline", roleBasedAccess(["teacher"]), approveOrDeclineResultUpdate);
 
 // Teacher Assessment
 v1Routes.post("/teacher-assessments", roleBasedAccess(["teacher"]), getTeacherAssessment);
@@ -172,6 +206,7 @@ v1Routes.get("/scratch-cards/:page/:limit/:scratchCardType", getScratchCards);
 v1Routes.get("/scratch-card/:id", getScratchCard);
 v1Routes.get("/scratch-card-summary", scratchCardSummaey);
 v1Routes.post("/scratch-card", createScratchCards);
+v1Routes.post("/bulk-pair", pairAllStudents);
 v1Routes.put("/pair-scratch-card", pairScratchCard);
 v1Routes.put("/unpair-scratch-card", unpairScratchCard);
 v1Routes.delete("/scratch-card/:id", deleteScratchCard);

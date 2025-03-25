@@ -12,7 +12,7 @@ const schoolTemplateSchema = new Schema({
     },
     templateType: {
         type: String,
-        enum: ["assignment-template", "curriculum-template"],
+        enum: ["assignment-template", "curriculum-template", "result-stamp", "terminal-news-letter"],
         required: true
     },
     fileLink: {

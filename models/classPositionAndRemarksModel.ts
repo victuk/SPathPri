@@ -23,7 +23,7 @@ const classPositionAndRemarksSchema = new Schema(
     term: {
       type: String,
       enum: ["first-term", "second-term", "third-term"],
-      required: true
+      required: true,
     },
     year: {
       type: String,
@@ -47,23 +47,114 @@ const classPositionAndRemarksSchema = new Schema(
     },
     principalsRemark: {
       type: String,
-      default: null
+      default: null,
     },
     verdict: {
       type: String,
       enum: ["promoted", "promoted-on-trial", "pass", "fail"],
       required: true,
     },
+
+    // Affective assessment
+
+    creativity: {
+      type: Number,
+      enum: [1, 2, 3, 4, 5],
+      default: 5,
+    },
+
+    neatness: {
+      type: Number,
+      enum: [1, 2, 3, 4, 5],
+      default: 5,
+    },
+
+    respectSchoolRules: {
+      type: Number,
+      enum: [1, 2, 3, 4, 5],
+      default: 5,
+    },
+
+    followDirection: {
+      type: Number,
+      enum: [1, 2, 3, 4, 5],
+      default: 5,
+    },
+
+    readFluently: {
+      type: Number,
+      enum: [1, 2, 3, 4, 5],
+      default: 5,
+    },
+
+    spiritOfCoperation: {
+      type: Number,
+      enum: [1, 2, 3, 4, 5],
+      default: 5,
+    },
+
+    acceptsResponsibilities: {
+      type: Number,
+      enum: [1, 2, 3, 4, 5],
+      default: 5,
+    },
+
+    completesHomeWork: {
+      type: Number,
+      enum: [1, 2, 3, 4, 5],
+      default: 5,
+    },
+
+    memorizesScripturesAccurately: {
+      type: Number,
+      enum: [1, 2, 3, 4, 5],
+      default: 5,
+    },
+
+    // Psychomotor assessment
+
+    games: {
+      type: Number,
+      enum: [1, 2, 3, 4, 5],
+      default: 5,
+    },
+
+    sports: {
+      type: Number,
+      enum: [1, 2, 3, 4, 5],
+      default: 5,
+    },
+
+    artsAndCrafts: {
+      type: Number,
+      enum: [1, 2, 3, 4, 5],
+      default: 5,
+    },
+
+    musicSkills: {
+      type: Number,
+      enum: [1, 2, 3, 4, 5],
+      default: 5,
+    },
+
+    communicationSkills: {
+      type: Number,
+      enum: [1, 2, 3, 4, 5],
+      default: 5,
+    },
+
     schoolId: {
       type: Types.ObjectId,
       ref: "schoolprofile",
       required: true,
-    }
+    },
   },
   { timestamps: true }
 );
 
-type classPositionAndRemarksCollectionType = InferSchemaType<typeof classPositionAndRemarksSchema>;
+type classPositionAndRemarksCollectionType = InferSchemaType<
+  typeof classPositionAndRemarksSchema
+>;
 
 classPositionAndRemarksSchema.plugin(paginate);
 
@@ -73,4 +164,7 @@ const classPositionAndRemarksCollection = mongoose.model<
     SoftDeleteModel<SoftDeleteDocument, classPositionAndRemarksCollectionType>
 >("classpositionandremarks", classPositionAndRemarksSchema);
 
-export { classPositionAndRemarksCollection, classPositionAndRemarksCollectionType };
+export {
+  classPositionAndRemarksCollection,
+  classPositionAndRemarksCollectionType,
+};

@@ -4,6 +4,7 @@ import { StudentsScratchCardCollection } from "../models/studentsScratchCard";
 import { v4 } from "uuid";
 import { studentsCollection, studentsCollectionType } from "../models/students";
 import { sendEmail } from "../utils/emailUtilities";
+import { schoolProfileCollection } from "../models/schoolProfile";
 
 export const createScratchCards = async (req: CustomRequest, res: Response, next: NextFunction) => {
     try {
@@ -269,3 +270,68 @@ export const deleteScratchCard = async (req: CustomRequest, res: Response, next:
         next(error);
     }
 }
+
+export const CSVScratchCards = async (req: CustomRequest, res: Response, next: NextFunction) => {
+    try {
+        
+        const {schoolId} = req.params;
+
+        const schoolDetails = await schoolProfileCollection.findById(schoolId);
+
+        const result = await StudentsScratchCardCollection.find({schoolId, term: schoolDetails?.currentTerm, year: schoolDetails?.currentYear}).populate("studentId");
+
+        res.send({result});
+
+    } catch (error) {
+        next(error);
+    }
+}
+
+export const pairAllStudents = async (req: CustomRequest, res: Response, next: NextFunction) => {
+    try {
+
+        const {schoolId} = req.body;
+
+        const schoolDetails = await schoolProfileCollection.findById(schoolId);
+      const students = await studentsCollection.find({schoolId});
+      const studentScratchCard = await StudentsScratchCardCollection.find({schoolId});
+
+      let totalStudentPaired = 0;
+      let newScratchCardsCreated = 0;
+
+      for(let i = 0; i < students.length; i++) {
+        const studentHasScratchCard = studentScratchCard.find(s => (s.studentId).toString() == (students[i]._id).toString());
+
+        if(!studentHasScratchCard) {
+          const unpairedScratchCard = studentScratchCard.find(s => (s.studentId).toString() == null);
+
+          if(unpairedScratchCard) {
+            await StudentsScratchCardCollection.findByIdAndUpdate(unpairedScratchCard._id, {
+              studentId: students[i]._id
+            });
+            totalStudentPaired++;
+          } else {
+            await StudentsScratchCardCollection.create({
+              studentId: students[i]._id,
+              scratchCardId: v4().split("-")[4],
+              dateIssued: new Date(),
+              schoolId: students[i].schoolId,
+              year: schoolDetails?.currentYear,
+              term: schoolDetails?.currentTerm
+            });
+            totalStudentPaired++;
+            newScratchCardsCreated++;
+          }
+        }
+      }
+      
+      res.send({
+        message: "Bulk scratch card pairing successful",
+        result: {totalStudentPaired, newScratchCardsCreated}
+      });
+
+    } catch (error) {
+        next(error);
+    }
+
+};

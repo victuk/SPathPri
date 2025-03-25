@@ -8,7 +8,7 @@ import { staffsCollection } from '../models/staffs';
 export const getStudentProfile = async (req: CustomRequest, res: Response, next: NextFunction) => {
     try {
         
-        const profile = await studentsCollection.findById(req.userDetails?.userId).populate("schoolId");
+        const profile = await studentsCollection.findById(req.userDetails?.userId).populate("classId").populate("schoolId");
 
         res.send({
             result: profile
@@ -44,7 +44,7 @@ export const getUserProfile = async (req: CustomRequest, res: Response, next: Ne
         if(userType == "student") {
             profile = await studentsCollection.findById(id).populate("schoolId").populate("classId");
         } else {
-            profile = await staffsCollection.findById(id).populate("classTeacherOf").populate("subjectTeacherOf").populate("schoolId");
+            profile = await staffsCollection.findById(id).populate("classTeacherOf").populate("subjectTeacherOf.classId").populate("subjectTeacherOf.subjectId").populate("schoolId");
         }
         
         res.send({

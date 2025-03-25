@@ -152,7 +152,7 @@ export const deleteSchoolClass = async (
       res.status(400).send({
         message: `You can not delete this class because this class has ${classStudentCount} student${
           classStudentCount == 1 ? "" : "s"
-        } in it`,
+        } in it. Kindly move students in this class to another cass before deleting.`,
       });
       return;
     }
@@ -385,6 +385,8 @@ export const getResultRemark = async (
 
     let result: any;
 
+    const selectValue = "firstName surname otherNames gender studentUid profilePic";
+
     if (req.userDetails?.role == "admin") {
 
         if(!classId) {
@@ -396,7 +398,7 @@ export const getResultRemark = async (
 
       result = await classPositionAndRemarksCollection.find({
         studentClass: classId,
-      });
+      }).populate("studentId", selectValue).populate("studentClass");
     } else if (req.userDetails?.role == "teacher") {
       const teacherProfile = await staffsCollection.findById(
         req.userDetails.userId
@@ -411,7 +413,7 @@ export const getResultRemark = async (
 
       result = await classPositionAndRemarksCollection.find({
         studentClass: teacherProfile?.classTeacherOf,
-      });
+      }).populate("studentId", selectValue).populate("studentClass");
     }
 
     res.send({
@@ -432,18 +434,21 @@ export const updateResultRemark = async (
 
     const { remark } = req.body;
 
+    let updatedPrincipalsRemark: any;
+
     if (req.userDetails?.role == "admin") {
-      await classPositionAndRemarksCollection.findByIdAndUpdate(positionId, {
+      updatedPrincipalsRemark = await classPositionAndRemarksCollection.findByIdAndUpdate(positionId, {
         principalsRemark: remark,
-      });
+      }, {new: true});
     } else if (req.userDetails?.role == "teacher") {
-      await classPositionAndRemarksCollection.findByIdAndUpdate(positionId, {
+      updatedPrincipalsRemark = await classPositionAndRemarksCollection.findByIdAndUpdate(positionId, {
         classTeacherRemark: remark,
-      });
+      }, {new: true});
     }
 
     res.send({
-      result: "Remark updated successfully",
+      message: "Remark updated successfully",
+      result: updatedPrincipalsRemark
     });
   } catch (error) {
     next(error);
