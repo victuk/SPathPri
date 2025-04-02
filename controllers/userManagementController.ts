@@ -16,6 +16,8 @@ import { normalizePhoneNumber } from "../utils/normalizePhoneNumber";
 import { studentPositionAndRemark } from "../models/positionAndRemarksModel";
 import { AttendanceCollection } from "../models/studentsAttendance";
 import { pendingStudentsAssessmentRequestCollection } from "../models/pendingStudentsAssessmentRequest";
+import { schoolTemplateCollection } from "../models/schoolTemplateModel";
+import { notificationCollection } from "../models/notifications";
 
 export const getStudents = async (
   req: CustomRequest,
@@ -143,6 +145,98 @@ export const getStudentResult = async (
     res.send({
       message: "Class and subject",
       result: response,
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const CSVGetStudentResult = async (
+  req: CustomRequest,
+  res: Response,
+  next: NextFunction
+) => {
+  try {
+    const { classId, subjectId } = req.body;
+
+    const query: any = {};
+
+    if (classId) {
+      query.studentClass = classId;
+    }
+
+    if (subjectId) {
+      query.subjectId = subjectId;
+    }
+
+    const schoolDetails = await schoolProfileCollection.findById(
+      req.userDetails?.schoolId
+    );
+
+    query.term = schoolDetails?.currentTerm;
+    query.year = schoolDetails?.currentYear;
+
+    const response = await resultCollection
+      .find(query)
+      .populate("studentId", "-password")
+      .populate("teacherId", "-password")
+      .populate("subjectId")
+      .populate("studentClass");
+
+    res.send({
+      message: "Class and subject",
+      result: response,
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const getStudentTermResult = async (
+  req: CustomRequest,
+  res: Response,
+  next: NextFunction
+) => {
+  try {
+    const query: any = {};
+
+    const schoolDetails = await schoolProfileCollection.findById(
+      req.userDetails?.schoolId
+    );
+
+    const studentDetails = await studentsCollection.findById(
+      req.userDetails?.userId
+    );
+
+    query.studentId = req.userDetails?.userId;
+    query.studentClass = studentDetails?.classId;
+    query.term = schoolDetails?.currentTerm;
+    query.year = schoolDetails?.currentYear;
+
+    const response = await resultCollection
+      .find(query)
+      .populate("studentId", "-password")
+      .populate("teacherId", "-password")
+      .populate("subjectId")
+      .populate("studentClass");
+
+    const stamp = await schoolTemplateCollection.findOne({
+      templateType: "result-stamp",
+      schoolId: req.userDetails?.schoolId,
+    });
+
+    const classSize = await studentsCollection
+      .find({
+        classId: studentDetails?.classId,
+        schoolId: req.userDetails?.schoolId,
+      })
+      .countDocuments();
+
+    res.send({
+      message: "Class and subject",
+      result: response,
+      stamp,
+      classSize,
     });
   } catch (error) {
     next(error);
@@ -385,22 +479,15 @@ export const resultUpdateRequest = async (
   next: NextFunction
 ) => {
   try {
-    const {
-      studentId,
-      teacherId,
-      subjectId,
-      classId,
-      studentAssessmentId,
-      testOne,
-      testTwo,
-      testThree,
-      exam,
-    } = req.body;
+    const { studentAssessmentId, testOne, testTwo, testThree, exam } = req.body;
+
+    console.log(req.body);
 
     const requestAlreadyExist =
       await pendingStudentsAssessmentRequestCollection.findOne({
         studentAssessmentId,
         requestMadeBy: req.userDetails?.userId,
+        schoolId: req.userDetails?.schoolId,
       });
 
     const total =
@@ -421,6 +508,7 @@ export const resultUpdateRequest = async (
         {
           studentAssessmentId,
           requestMadeBy: req.userDetails?.userId,
+          schoolId: req.userDetails?.schoolId,
         },
         {
           testOne,
@@ -428,20 +516,26 @@ export const resultUpdateRequest = async (
           testThree,
           exam,
           total,
+          status: "pending"
         }
       );
     } else {
+      const recordDetails = await resultCollection.findById(
+        studentAssessmentId
+      );
+
       await pendingStudentsAssessmentRequestCollection.create({
         requestMadeBy: req.userDetails?.userId,
-        studentId,
-        teacherId,
-        subjectId,
-        classId,
+        studentId: recordDetails?.studentId,
+        teacherId: recordDetails?.teacherId,
+        subjectId: recordDetails?.subjectId,
+        classId: recordDetails?.studentClass,
         studentAssessmentId,
         testOne,
         testTwo,
         testThree,
         exam,
+        total,
         schoolId: req.userDetails?.schoolId,
       });
     }
@@ -467,7 +561,7 @@ export const approveOrDeclineResultUpdate = async (
         await pendingStudentsAssessmentRequestCollection.findByIdAndUpdate(
           requestId,
           {
-            status: verdict,
+            status: verdict + "d",
           },
           { new: true }
         );
@@ -514,8 +608,18 @@ export const approveOrDeclineResultUpdate = async (
       );
     }
 
+    const updatedRequest = await pendingStudentsAssessmentRequestCollection
+    .findById(requestId)
+    .populate("studentId")
+    .populate("teacherId")
+    .populate("requestMadeBy")
+    .populate("subjectId")
+    .populate("classId")
+    .populate("studentAssessmentId");
+
     res.send({
       message: `Update request ${verdict}d successfully.`,
+      result: updatedRequest
     });
   } catch (error) {
     next(error);
@@ -542,6 +646,27 @@ export const getApprovalList = async (
           {
             page: page ? parseInt(page) : 1,
             limit: limit ? parseInt(limit) : 10,
+            populate: [
+              {
+                path: "studentId",
+              },
+              {
+                path: "teacherId",
+              },
+              {
+                path: "requestMadeBy",
+              },
+              {
+                path: "subjectId",
+              },
+              {
+                path: "classId",
+              },
+              {
+                path: "studentAssessmentId"
+              }
+            ],
+            sort: {createdAt: -1}
           }
         );
       } else {
@@ -554,6 +679,27 @@ export const getApprovalList = async (
           {
             page: page ? parseInt(page) : 1,
             limit: limit ? parseInt(limit) : 10,
+            populate: [
+              {
+                path: "studentId",
+              },
+              {
+                path: "teacherId",
+              },
+              {
+                path: "requestMadeBy",
+              },
+              {
+                path: "subjectId",
+              },
+              {
+                path: "classId",
+              },
+              {
+                path: "studentAssessmentId"
+              }
+            ],
+            sort: {createdAt: -1}
           }
         );
       }
@@ -567,7 +713,28 @@ export const getApprovalList = async (
           {
             page: page ? parseInt(page) : 1,
             limit: limit ? parseInt(limit) : 10,
-          }
+            populate: [
+              {
+                path: "studentId",
+              },
+              {
+                path: "teacherId",
+              },
+              {
+                path: "requestMadeBy",
+              },
+              {
+                path: "subjectId",
+              },
+              {
+                path: "classId",
+              },
+              {
+                path: "studentAssessmentId"
+              }
+            ],
+            sort: {createdAt: -1}
+          },
         );
       } else {
         result = await pendingStudentsAssessmentRequestCollection.paginate(
@@ -579,6 +746,27 @@ export const getApprovalList = async (
           {
             page: page ? parseInt(page) : 1,
             limit: limit ? parseInt(limit) : 10,
+            populate: [
+              {
+                path: "studentId",
+              },
+              {
+                path: "teacherId",
+              },
+              {
+                path: "requestMadeBy",
+              },
+              {
+                path: "subjectId",
+              },
+              {
+                path: "classId",
+              },
+              {
+                path: "studentAssessmentId"
+              }
+            ],
+            sort: {createdAt: -1}
           }
         );
       }
@@ -760,6 +948,7 @@ export const deleteStudentAssessment = async (
       studentId,
       subjectId,
       studentClass: classId,
+      schoolId: req.userDetails?.schoolId,
     });
 
     res.send({
@@ -796,7 +985,8 @@ export const getAllSchoolStudents = async (
   try {
     const students = await studentsCollection
       .find({ schoolId: req.userDetails?.schoolId })
-      .populate("classId").sort({firstName: -1});
+      .populate("classId")
+      .sort({ firstName: -1 });
 
     res.send({ result: students });
   } catch (error) {
@@ -883,6 +1073,10 @@ export const createStudent = async (
     } = req.body;
 
     console.log("req.body", req.body);
+
+    // const duplicateStudent = await studentsCollection.findOne({
+
+    // });
 
     const password = "dominion1234";
 
@@ -1038,7 +1232,26 @@ export const removeStudentFromSchool = async (
   try {
     const { id } = req.params;
 
-    await studentsCollection.findByIdAndUpdate(id, { schoolId: null });
+    if (!id) {
+      res.status(400).send({
+        message: "Invalid ID",
+      });
+      return;
+    }
+
+    const studentDetails = await studentsCollection.findById(id);
+
+    if (!studentDetails) {
+      res.status(404).send({
+        message: "Student not found",
+      });
+      return;
+    }
+
+    await studentsCollection.findByIdAndUpdate(id, {
+      classId: null,
+      schoolId: null,
+    });
 
     res.send({
       message: "Student removed from school Successfully",
@@ -1056,11 +1269,28 @@ export const deleteStudent = async (
   try {
     const { id } = req.params;
 
+    if (!id) {
+      res.status(400).send({
+        message: "Invalid ID",
+      });
+      return;
+    }
+
+    const studentDetails = await studentsCollection.findById(id);
+
+    if (!studentDetails) {
+      res.status(404).send({
+        message: "Student not found",
+      });
+      return;
+    }
+
     // const deletedStudent = await studentsCollection.findByIdAndUpdate(id, {
     //   schoolId: null,
     // });
 
     const deletedStudent = await studentsCollection.findByIdAndUpdate(id, {
+      classId: null,
       schoolId: null,
     });
 

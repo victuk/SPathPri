@@ -69,7 +69,7 @@ const StudentsSchema = new Schema({
     classId: {
         type: Schema.Types.ObjectId,
         ref: "schoolclasses",
-        required: true
+        default: null
     },
     admissionYear: {
         type: String,

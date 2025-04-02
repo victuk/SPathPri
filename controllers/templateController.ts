@@ -27,6 +27,24 @@ export const getSchoolTemplates = async (
   }
 };
 
+export const getTemplateByType = async (
+  req: CustomRequest,
+  res: Response,
+  next: NextFunction
+) => {
+  try {
+    
+    const {templateType} = req.params;
+
+    const result = await schoolTemplateCollection.findOne({templateType, schoolId: req.userDetails?.schoolId});
+
+    res.send({result});
+
+  } catch (error) {
+    next(error);
+  }
+}
+
 export const uploadSchoolTemplate = async (
   req: CustomRequest,
   res: Response,

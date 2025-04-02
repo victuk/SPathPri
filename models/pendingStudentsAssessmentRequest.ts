@@ -25,12 +25,12 @@ const pendingStudentsAssessmentRequestSchema = new Schema({
     },
     classId: {
         type: Schema.Types.ObjectId,
-        ref:"classes",
+        ref:"schoolclasses",
         required: true
     },
     studentAssessmentId: {
         type: Schema.Types.ObjectId,
-        ref:"studentAssessments",
+        ref:"results",
         required: true
     },
     testOne: {

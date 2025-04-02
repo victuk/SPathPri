@@ -177,7 +177,7 @@ export const generateResult = async (
   try {
     const { classId } = req.body;
 
-    const studentsInClass = await studentsCollection.find({ classId });
+    const studentsInClass = await studentsCollection.find({ classId, schoolId: req.userDetails?.schoolId });
 
     const schoolDetails = await schoolProfileCollection.findById(
       req.userDetails?.schoolId

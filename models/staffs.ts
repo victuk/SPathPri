@@ -88,6 +88,10 @@ const staffsSchema = new Schema({
         enum: ["active", "new", "inactive", "suspended", "archived"],
         default: "new"
     },
+    allowAdminEditAssessment: {
+        type: Boolean,
+        default: true
+    },
     schoolId: {
         type: Types.ObjectId,
         ref: "schoolprofile",

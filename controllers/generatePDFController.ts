@@ -22,13 +22,14 @@ export const generatePDF = async (
 
     const fileName = v4() + '.pdf';
 
-      console.log("htmlContent", htmlContent);
+      // console.log("htmlContent", htmlContent);
       // const browser = await puppeteer.launch();
       const browser = await puppeteer.launch({
         args: ['--no-sandbox', '--disable-setuid-sandbox']
       });
       const page = await browser.newPage();
-      await page.setContent(htmlContent);
+      await page.setContent(htmlContent, {waitUntil: "load"});
+      // await page.waitForSelector('#contentReady', { timeout: 10000 });
       const pdfBuffer = await page.pdf();
       await browser.close();
 
