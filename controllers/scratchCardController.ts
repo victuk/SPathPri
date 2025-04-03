@@ -330,7 +330,7 @@ export const CSVScratchCards = async (
   next: NextFunction
 ) => {
   try {
-    const { schoolId } = req.params;
+    const { schoolId, classId } = req.params;
 
     const schoolDetails = await schoolProfileCollection.findById(schoolId);
 
@@ -338,6 +338,7 @@ export const CSVScratchCards = async (
       {
         $match: {
           schoolId: schoolDetails?._id,
+          classId: new mongoose.Types.ObjectId(classId)
         },
       },
       {

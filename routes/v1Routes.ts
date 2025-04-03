@@ -495,7 +495,7 @@ v1Routes.delete("/track/:id", deleteSchoolTrack);
 // Scrath card route
 v1Routes.get("/scratch-cards/:page/:limit/:scratchCardType", getScratchCards);
 v1Routes.get("/scratch-card/:id", getScratchCard);
-v1Routes.get("/csv-scratch-cards/:schoolId", CSVScratchCards);
+v1Routes.get("/csv-scratch-cards/:schoolId/:classId", CSVScratchCards);
 v1Routes.get("/scratch-card-summary", scratchCardSummaey);
 v1Routes.post("/scratch-card", createScratchCards);
 v1Routes.post("/bulk-pair", pairAllStudents);
