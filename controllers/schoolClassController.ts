@@ -243,7 +243,7 @@ export const generateResult = async (
 
     for (let i = 0; i < studentsAverage.length; i++) {
       let studentPosition: number;
-      if(i > 0) {
+      if(i > 0 && i < studentsAverage.length) {
         if(studentsAverage[i].studentSubjectAverage == studentsAverage[i + 1].studentSubjectAverage ||
           studentsAverage[i].studentSubjectAverage == studentsAverage[i - 1].studentSubjectAverage
         ) {
