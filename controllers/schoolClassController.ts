@@ -239,23 +239,24 @@ export const generateResult = async (
       (a, b) => b.studentSubjectAverage - a.studentSubjectAverage
     );
 
-    let position = 0
+    // let position = 0
 
     for (let i = 0; i < studentsAverage.length; i++) {
-      let studentPosition: number;
-      if(i > 0 && i < studentsAverage.length) {
-        if(studentsAverage[i].studentSubjectAverage == studentsAverage[i + 1].studentSubjectAverage ||
-          studentsAverage[i].studentSubjectAverage == studentsAverage[i - 1].studentSubjectAverage
-        ) {
-          studentPosition = position;
-        } else {
-          position = position + 1;
-          studentPosition = position;
-        }
-      } else {
-        position + 1;
-        studentPosition = position;
-      }
+      // let studentPosition: number;
+      // if(i > 0 && i < studentsAverage.length) {
+      //   if(studentsAverage[i].studentSubjectAverage == studentsAverage[i + 1].studentSubjectAverage ||
+      //     studentsAverage[i].studentSubjectAverage == studentsAverage[i - 1].studentSubjectAverage
+      //   ) {
+      //     studentPosition = position;
+      //   } else {
+      //     position = position + 1;
+      //     studentPosition = position;
+      //   }
+      // } else {
+      //   position + 1;
+      //   studentPosition = position;
+      // }
+      let studentPosition = i + 1;
       studentsAverage[i].position = getOrdinalSuffix(studentPosition);
     }
 
