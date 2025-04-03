@@ -222,7 +222,7 @@ export const generateResult = async (
         schoolId: schoolDetails?._id,
         studentSubjectAverage,
         studentSubjectTotal,
-        verdict: studentSubjectAverage > 60 ? "pass" : "fail",
+        verdict: studentSubjectAverage >= 60 ? "pass" : "fail",
       });
     }
 
@@ -239,8 +239,23 @@ export const generateResult = async (
       (a, b) => b.studentSubjectAverage - a.studentSubjectAverage
     );
 
+    let position = 0
+
     for (let i = 0; i < studentsAverage.length; i++) {
-      let studentPosition = i + 1;
+      let studentPosition: number;
+      if(i > 0) {
+        if(studentsAverage[i].studentSubjectAverage == studentsAverage[i + 1].studentSubjectAverage ||
+          studentsAverage[i].studentSubjectAverage == studentsAverage[i - 1].studentSubjectAverage
+        ) {
+          studentPosition = position;
+        } else {
+          position = position + 1;
+          studentPosition = position;
+        }
+      } else {
+        position + 1;
+        studentPosition = position;
+      }
       studentsAverage[i].position = getOrdinalSuffix(studentPosition);
     }
 

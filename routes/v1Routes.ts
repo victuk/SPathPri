@@ -234,10 +234,65 @@ v1Routes.post("/check", async function (req, res, next) {
 
 });
 
-v1Routes.post("/check-for-duplicate/:classId", async (req, res, next) => {
+v1Routes.post("/check-for-duplicate/:classId/:schoolId", async (req, res, next) => {
   try {
     
-    // const {}
+    const { classId, schoolId } = req.params;
+
+    const studentAssessmentInClass = await resultCollection.find({studentClass: classId, schoolId});
+
+    const duplicates = [];
+
+    for (let i = 0; i < studentAssessmentInClass.length; i++) {
+      const subjectScoreForSubject = studentAssessmentInClass.filter(s => 
+        (s?.subjectId).toString() == (studentAssessmentInClass[i]?.subjectId).toString() &&
+        (s?.studentId).toString() == (studentAssessmentInClass[i]?.studentId).toString());
+
+        let duplicate = false;
+
+      if (subjectScoreForSubject.length > 1) {
+        for(let j = 0; j < duplicates.length; j++) {
+          if(
+            (duplicates[j][0]?.subjectId)?.toString() == (studentAssessmentInClass[i]?.subjectId)?.toString() &&
+            (duplicates[j][0]?.studentId)?.toString() == (studentAssessmentInClass[i]?.studentId)?.toString()
+          ) {
+            duplicate = true;
+            break;
+          }
+        }
+        if(!duplicate) {
+          // if(subjectScoreForSubject[0].testsAndExamTotal == subjectScoreForSubject[1].testsAndExamTotal) {
+          //   await resultCollection.findByIdAndDelete(subjectScoreForSubject[1]?._id);
+          // } else {
+          // }
+          duplicates.push(subjectScoreForSubject);
+        }
+      }
+    }
+
+    res.send({
+      duplicates
+    });
+
+  } catch (error) {
+    next(error);
+  }
+});
+
+v1Routes.get("/find-removed-students", async (req, res, next) => {
+  try {
+    
+    const student = await studentsCollection.find({schoolId: null});
+
+    const assessmentDeleted = await resultCollection.deleteMany({studentId: {$in: student.map(s => s._id)}});
+
+    const attendanceDeleted = await AttendanceCollection.deleteMany({studentId: {$in: student.map(s => s._id)}});
+
+    const resultAndRemarkDeleted = await studentPositionAndRemark.deleteMany({studentID: {$in: student.map(s => s._id)}});
+
+    await studentsCollection.deleteMany({schoolId: null});
+
+    res.send({message: "Done", assessmentDeleted, attendanceDeleted, resultAndRemarkDeleted});
 
   } catch (error) {
     next(error);

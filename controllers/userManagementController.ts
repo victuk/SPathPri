@@ -1074,9 +1074,19 @@ export const createStudent = async (
 
     console.log("req.body", req.body);
 
-    // const duplicateStudent = await studentsCollection.findOne({
+    const duplicateStudent = await studentsCollection.findOne({
+      firstName: { $regex: new RegExp(firstName, "i") },
+      otherNames: { $regex: new RegExp(otherNames, "i") },
+      surname: { $regex: new RegExp(surname, "i") },
+      classId,
+      schoolId: req.userDetails?.schoolId
+    });
 
-    // });
+    if(duplicateStudent) {
+      res.status(409).send({
+        message: "This student already exist!"
+      });
+    }
 
     const password = "dominion1234";
 
