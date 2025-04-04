@@ -942,7 +942,7 @@ export const deleteStudentAssessment = async (
   next: NextFunction
 ) => {
   try {
-    const { studentId, subjectId, classId } = req.body;
+    const { studentId, subjectId, classId } = req.params;
 
     await resultCollection.findOneAndDelete({
       studentId,
