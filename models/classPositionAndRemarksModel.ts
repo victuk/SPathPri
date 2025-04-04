@@ -148,6 +148,60 @@ const classPositionAndRemarksSchema = new Schema(
       ref: "schoolprofile",
       required: true,
     },
+    handWriting: {
+      test: {
+        type: String,
+        default: "A"
+      },
+      project: {
+        type: String,
+        default: "A"
+      },
+      exams: {
+        type: String,
+        default: "A"
+      },
+      total: {
+        type: String,
+        default: "A"
+      },
+    },
+    CCA: {
+      test: {
+        type: String,
+        default: "A"
+      },
+      project: {
+        type: String,
+        default: "A"
+      },
+      exams: {
+        type: String,
+        default: "A"
+      },
+      total: {
+        type: String,
+        default: "A"
+      },
+    },
+    rhymes: {
+      test: {
+        type: String,
+        default: "A"
+      },
+      project: {
+        type: String,
+        default: "A"
+      },
+      exams: {
+        type: String,
+        default: "A"
+      },
+      total: {
+        type: String,
+        default: "A"
+      },
+    }
   },
   { timestamps: true }
 );
