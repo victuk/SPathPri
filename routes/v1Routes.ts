@@ -134,6 +134,7 @@ import {
 } from "../controllers/curriculumController";
 import {
   createSchool,
+  getMySchoolDetails,
   getSchool,
   getSchools,
   updateSchool,
@@ -171,6 +172,8 @@ import { studentPositionAndRemark } from "../models/positionAndRemarksModel";
 import { AttendanceCollection } from "../models/studentsAttendance";
 import { staffsCollection } from "../models/staffs";
 import { Types } from "mongoose";
+import { changePasswordForStaffs, updatePasswordChangeForStaffs } from "../controllers/settingsController";
+import { changeFeedbackTicketStatus, createFeedback, getOthersFeedbacks, getSubmittedFeedbacks, reopenFeedbackTicket, viewFeedback } from "../controllers/feedbackController";
 
 const v1Routes = Router();
 
@@ -508,6 +511,10 @@ v1Routes.get("/profile/student", getStudentProfile);
 v1Routes.get("/profile/staff", getStaffProfile);
 v1Routes.get("/profile/user/:id/:userType", getUserProfile);
 
+// Settings route
+v1Routes.put("/staff/change-password", changePasswordForStaffs);
+v1Routes.put("/staff/confirm-password-change", updatePasswordChangeForStaffs);
+
 // School session
 v1Routes.get("/school-session/:userType", getSchoolSessionDetails);
 v1Routes.put("/school-session", updateSchoolSessionDetails);
@@ -521,6 +528,7 @@ v1Routes.get("/assignment-template", getAssignmentTemplate);
 v1Routes.get("/curriculum-template", getCurriculumTemplate);
 
 v1Routes.get("/schools", getSchools);
+v1Routes.get("/school/my-school-details", getMySchoolDetails);
 v1Routes.get("/school/:id", getSchool);
 v1Routes.post("/school", createSchool);
 v1Routes.put("/school/:id", updateSchool);
@@ -530,6 +538,14 @@ v1Routes.put("/school/:id", updateSchool);
 v1Routes.post("/class-attendance", getClassAttendance);
 v1Routes.put("/class-attendance", updateAttendance);
 v1Routes.put("/reset-class-attendance", resetAttendance);
+
+// Feedback routes
+v1Routes.get("/my-submitted-feedbacks/:page/:limit", getSubmittedFeedbacks);
+v1Routes.get("/feedback-from-others/:page/:limit", getOthersFeedbacks);
+v1Routes.get("/feedback/:id", viewFeedback);
+v1Routes.post("/feedback", createFeedback);
+v1Routes.put("/feedback-status/:id", changeFeedbackTicketStatus);
+v1Routes.put("/reopen-feedback/:id", reopenFeedbackTicket);
 
 v1Routes.post("/generate-pdf", generatePDF);
 

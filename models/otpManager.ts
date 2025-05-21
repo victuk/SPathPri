@@ -16,13 +16,16 @@ const OTPSchema = new Schema({
     },
     sentVia: {
         type: String,
-        enum: ["email", "sms"],
+        enum: ["email", "sms", "email-and-sms"],
         required: true
     },
     purpose: {
         type: String,
-        enum: ["verifyemail", "verifyphonenumber", "resetpassword"],
+        enum: ["verifyemail", "verifyphonenumber", "resetpassword", "changepassword"],
         required: true
+    },
+    tempPassword: {
+        type: String
     }
 }, {timestamps: true});
 

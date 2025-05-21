@@ -113,3 +113,27 @@ export const updateSchool = async (req: CustomRequest, res: Response, next: Next
         next(error);
     }
 }
+
+export const getMySchoolDetails = async (req: CustomRequest, res: Response, next: NextFunction) => {
+    try {
+
+        const schoolId = req.userDetails?.schoolId;
+
+        console.log("req.userDetails", req.userDetails);
+
+        const schoolDetails = await schoolProfileCollection.findById(schoolId);
+
+        if(!schoolDetails) {
+            res.status(404).send({
+                message: "School details not found"
+            });
+        }
+
+        res.send({
+            result: schoolDetails
+        });
+
+    } catch (error) {
+        next(error);
+    }
+}

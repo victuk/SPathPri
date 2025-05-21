@@ -231,8 +231,8 @@ export const generateResult = async (
         (s) => s.subjectId.toString() == subjects[i].id
       );
 
-      if (studentOffersSubject.length > 0) {
-      }
+      // if (studentOffersSubject.length > 0) {
+      // }
     }
 
     studentsAverage.sort(

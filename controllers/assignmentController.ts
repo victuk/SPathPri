@@ -34,6 +34,9 @@ export const assignments = async (
             {
               path: "subjectId",
             },
+            {
+              path: "classId"
+            }
           ],
         }
       );
@@ -156,7 +159,7 @@ export const updateAssignment = async (
 
     const { id } = req.params;
 
-    let updatedAssignment: any;
+    var updatedAssignment: any;
 
     if (req.userDetails?.role == "teacher") {
       updatedAssignment = await assignmentCollection.findByIdAndUpdate(id, {
@@ -181,6 +184,11 @@ export const updateAssignment = async (
         fileLink,
       });
     }
+
+    res.send({
+      result: updatedAssignment
+    });
+
   } catch (error) {
     next(error);
   }

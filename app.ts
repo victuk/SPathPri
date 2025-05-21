@@ -14,6 +14,7 @@ import bodyParser from "body-parser";
 import cors from "cors";
 import logger from "morgan";
 import v1Routes from "./routes/v1Routes";
+import v2Routes from "./routes/v2Routes";
 
 var app: express.Application = express();
 
@@ -46,6 +47,7 @@ app.use(express.urlencoded({ extended: false }));
 app.use(express.static(path.join(__dirname, 'public')));
 
 app.use("/v1", v1Routes);
+app.use("/v2", v2Routes);
 
 app.get("/", (_req, res) => {
   res.send("I'm healthy");
