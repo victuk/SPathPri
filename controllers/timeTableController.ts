@@ -50,16 +50,12 @@ export const getTimetables = async (req: CustomRequest, res: Response, next: Nex
     }
 }
 
-export const getTimeTableByClass = async (req: CustomRequest, res: Response, next: NextFunction) => {
+export const getAllTimetables = async (req: CustomRequest, res: Response, next: NextFunction) => {
     try {
-        const {classId} = req.params;
-
-        const timetable = await timeTableCollection.findOne({classId});
-
+        const timetables = await timeTableCollection.find({});
         res.send({
-            result: timetable
+            result: timetables
         });
-
     } catch (error) {
         next(error);
     }
@@ -86,19 +82,19 @@ export const createTimeTable = async (req: CustomRequest, res: Response, next: N
     try {
 
         const {
-            classId,
+            title,
             fileLink
         } = req.body;
 
-        const newAssignment = await timeTableCollection.create({
+        const newTimetable = await timeTableCollection.create({
             uploadedById: req.userDetails!!.userId,
-            classId,
+            title,
             fileLink
         });
 
         res.send({
-            message: "Assignment created successfully",
-            result: newAssignment
+            message: "Timetable created successfully",
+            result: newTimetable
         });
 
     } catch (error) {
@@ -106,36 +102,6 @@ export const createTimeTable = async (req: CustomRequest, res: Response, next: N
     }
 }
 
-export const updateTimeTable = async (req: CustomRequest, res: Response, next: NextFunction) => {
-    try {
-
-        const {
-            timeTableTitle,
-            classId,
-            assignmentStatus,
-            fileLink
-        } = req.body;
-
-        const { id } = req.params;
-
-        let updatedTimeTable = await timeTableCollection.findByIdAndUpdate(id, {
-                timeTableTitle,
-                classId,
-                assignmentStatus,
-                fileLink
-            });
-
-
-            res.send({
-                message: "Time table updated successfully",
-                result: updatedTimeTable
-            });
-        
-
-    } catch (error) {
-        next(error);
-    }
-}
 
 export const deleteTimeTable = async (req: CustomRequest, res: Response, next: NextFunction) => {
     try {

@@ -112,10 +112,8 @@ import { multerUpload } from "../utils/cloudinaryUtils";
 import {
   createTimeTable,
   deleteTimeTable,
-  getTimeTableByClass,
-  getTimeTableById,
-  getTimetables,
-  updateTimeTable,
+  getAllTimetables,
+  getTimeTableById
 } from "../controllers/timeTableController";
 import {
   createLessonNote,
@@ -461,17 +459,15 @@ v1Routes.delete("/subject/:id", deleteSubject);
 // Curriculum
 v1Routes.get("/curriculums/:page/:limit", getCurriculum);
 v1Routes.get("/curriculum/:id", getCurriculumById);
-v1Routes.post("/curriculum", createCurriculum);
+v1Routes.post("/curriculum", roleBasedAccess(["teacher", "admin"]), createCurriculum);
 v1Routes.put("/curriculum/:id", updateCurriculum);
-v1Routes.delete("/curriculum/:id", deleteCurriculum);
+v1Routes.delete("/curriculum/:id", roleBasedAccess(["teacher", "admin"]), deleteCurriculum);
 
 // Time table
-v1Routes.get("/time-tables", getTimetables);
-v1Routes.get("/time-table-by-class/:classId", getTimeTableByClass);
+v1Routes.get("/time-tables", getAllTimetables);
 v1Routes.get("/time-table/:id", getTimeTableById);
-v1Routes.post("/time-table", createTimeTable);
-v1Routes.put("/time-table/:id", updateTimeTable);
-v1Routes.delete("/time-table/:id", deleteTimeTable);
+v1Routes.post("/time-table", roleBasedAccess(["teacher", "admin"]), createTimeTable);
+v1Routes.delete("/time-table/:id", roleBasedAccess(["teacher", "admin"]), deleteTimeTable);
 
 // Student's class
 v1Routes.get("/classes", getSchoolClasses);

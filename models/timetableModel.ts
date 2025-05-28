@@ -10,9 +10,8 @@ const timeTableSchema = new Schema({
         ref: 'staffs',
         required: true
     },
-    classId: {
-        type: Types.ObjectId,
-        ref: "schoolclasses",
+    title: {
+        type: String,
         required: true
     },
     fileLink: {
