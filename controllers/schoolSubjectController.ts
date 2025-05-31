@@ -37,7 +37,7 @@ export const createSubject = async (req: CustomRequest, res: Response, next: Nex
 
         const {subject}: {subject: string} = req.body;
 
-        const slug = subject.toLocaleLowerCase().split(" ").join("-");
+        const slug = subject.toLocaleLowerCase().trim().split(" ").join("-");
 
         const subjectAlreadyExist = await subjectCollection.findOne({slug});
 
@@ -68,10 +68,10 @@ export const updateSubject = async (req: CustomRequest, res: Response, next: Nex
 
         const {subject} = req.body;
 
-        const slug = subject.toLocaleLowerCase().split(" ").join("-");
+        const slug = subject.toLocaleLowerCase().trim().split(" ").join("-");
 
         const ubpdatedSubject = await subjectCollection.findByIdAndUpdate(id, {
-            subject, slug
+            subject: subject.trim(), slug
         }, {new: true});
 
         res.send({

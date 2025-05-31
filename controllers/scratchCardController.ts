@@ -6,6 +6,7 @@ import { studentsCollection, studentsCollectionType } from "../models/students";
 import { sendEmail } from "../utils/emailUtilities";
 import { schoolProfileCollection } from "../models/schoolProfile";
 import mongoose from "mongoose";
+import Joi from "joi";
 
 export const createScratchCards = async (
   req: CustomRequest,
@@ -14,6 +15,25 @@ export const createScratchCards = async (
 ) => {
   try {
     const { term, year, scratchCardQuantity } = req.body;
+
+    const {error} = Joi.object({
+      term: Joi.string().required().messages({
+        "any.required": "Term value is required"
+      }),
+      year: Joi.string().required().messages({
+        "any.required": "Year value is required"
+      }),
+      scratchCardQuantity: Joi.number().required().messages({
+        "any.required": "Scratch card quantity value is required"
+      }),
+    }).validate(req.body);
+
+    if(error) {
+      res.status(400).send({
+        errorMessage: error.message
+      });
+      return;
+    }
 
     const scratchCards = [];
 
@@ -161,6 +181,22 @@ export const pairScratchCard = async (
   try {
     const { studentId, scratchCardId } = req.body;
 
+    const {error} = Joi.object({
+      studentId: Joi.string().required().messages({
+        "any.required": "Student's ID is required",
+      }),
+      scratchCardId: Joi.string().required().messages({
+        "any.required": "Scratch card's ID is required",
+      })
+    }).validate(req.body);
+
+    if(error) {
+      res.status(400).send({
+        errorMessage: error.message
+      });
+      return;
+    }
+
     const scratchCardDetails = await StudentsScratchCardCollection.findById(
       scratchCardId
     );
@@ -235,6 +271,22 @@ export const unpairScratchCard = async (
   try {
     const { studentId, scratchCardId } = req.body;
 
+    const {error} = Joi.object({
+      studentId: Joi.string().required().messages({
+        "any.required": "Student's ID is required",
+      }),
+      scratchCardId: Joi.string().required().messages({
+        "any.required": "Scratch card's ID is required",
+      })
+    }).validate(req.body);
+
+    if(error) {
+      res.status(400).send({
+        errorMessage: error.message
+      });
+      return;
+    }
+
     const scratchCardDetails = await StudentsScratchCardCollection.findById(
       scratchCardId
     );
@@ -283,6 +335,19 @@ export const searchScratchCard = async (
   try {
     const { scratchCardId } = req.body;
 
+    const {error} = Joi.object({
+      scratchCardId: Joi.string().required().messages({
+        "any.required": "Scratch card's ID is required",
+      })
+    }).validate(req.body);
+
+    if(error) {
+      res.status(400).send({
+        errorMessage: error.message
+      });
+      return;
+    }
+
     const scratchCardResult = await StudentsScratchCardCollection.find({
       scratchCardId: { $regex: scratchCardId, $options: "i" },
     });
@@ -302,6 +367,13 @@ export const deleteScratchCard = async (
 ) => {
   try {
     const { id } = req.params;
+
+    if(!id) {
+      res.status(400).send({
+        errorMessage: "Scratch ID to be deleted can't be empty."
+      });
+      return;
+    }
 
     const scratchCardDetails = await StudentsScratchCardCollection.findById(id);
 
@@ -331,6 +403,22 @@ export const CSVScratchCards = async (
 ) => {
   try {
     const { schoolId, classId } = req.params;
+
+    const {error} = Joi.object({
+      schoolId: Joi.string().required().messages({
+        "any.required": "School ID is required",
+      }),
+      classId: Joi.string().required().messages({
+        "any.required": "Class ID is required",
+      })
+    }).validate(req.body);
+
+    if(error) {
+      res.status(400).send({
+        errorMessage: error.message
+      });
+      return;
+    }
 
     const schoolDetails = await schoolProfileCollection.findById(schoolId);
 

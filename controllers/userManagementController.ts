@@ -18,6 +18,7 @@ import { AttendanceCollection } from "../models/studentsAttendance";
 import { pendingStudentsAssessmentRequestCollection } from "../models/pendingStudentsAssessmentRequest";
 import { schoolTemplateCollection } from "../models/schoolTemplateModel";
 import { notificationCollection } from "../models/notifications";
+import Joi from "joi";
 
 export const getStudents = async (
   req: CustomRequest,
@@ -1503,6 +1504,59 @@ export const createStaff = async (
       schoolId,
     }: StaffInterface = req.body;
 
+    if(!otherNames) {
+      delete req.body.otherNames;
+    }
+
+    if(!phoneNumber) {
+      delete req.body.phoneNumber;
+    }
+
+    if(classTeacherOf?.length == 0) {
+      delete req.body.classTeacherOf;
+    }
+
+    if(subjectTeacherOf?.length  == 0) {
+      delete req.body.subjectTeacherOf;
+    }
+
+    if(!stateOfOrigin) {
+      delete req.body.stateOfOrigin;
+    }
+
+    if(!lgaOfOrigin) {
+      delete req.body.lgaOfOrigin;
+    }
+
+    const {error} = Joi.object({
+      firstName: Joi.string().required().messages({
+        "any.required": "First name is required"
+      }),
+      otherNames: Joi.string().optional(),
+      surname: Joi.string().required().messages({
+        "any.required": "Surname is required"
+      }),
+      email: Joi.string().email().required().messages({
+        "any.required": "Email is required",
+        "string.email": "Kindly input a valid email address"
+      }),
+      gender: Joi.string().valid("male", "female").required().messages({
+        "any.required": "First name is required"
+      }),
+      phoneNumber: Joi.string().optional(),
+      profilePic: Joi.string().uri().required().messages({
+        "any.required": "Profile picture is required"
+      }),
+      role: Joi.string().valid("teacher", "admin", "record-keeper", "super-admin").required().messages({
+        "any.required": "First name is required"
+      }),
+      classTeacherOf: Joi.array().optional(),
+      subjectTeacherOf: Joi.array().optional(),
+      stateOfOrigin: Joi.string().optional(),
+      lgaOfOrigin: Joi.string().optional(),
+      schoolId: Joi.string().optional(),
+    }).validate(req.body);
+
     const emailAlreadyExist = await staffsCollection.findOne({
       email: email.toLocaleLowerCase().trim(),
     });
@@ -1519,9 +1573,9 @@ export const createStaff = async (
     }
 
     const newStaff = await staffsCollection.create({
-      firstName: firstName[0].toLocaleUpperCase() + firstName.slice(1),
-      otherNames: otherNames[0].toLocaleUpperCase() + otherNames.slice(1),
-      surname: surname[0].toLocaleUpperCase() + surname.slice(1),
+      firstName: firstName[0].toLocaleUpperCase() + firstName.slice(1).trim(),
+      otherNames: otherNames[0].toLocaleUpperCase() + otherNames.slice(1).trim(),
+      surname: surname[0].toLocaleUpperCase() + surname.slice(1).trim(),
       email: email.toLocaleLowerCase().trim(),
       profilePic,
       staffUid: await createStaffId(schoolDetails!!.schoolUid),
@@ -1575,7 +1629,6 @@ export const updateStaff = async (
       surname,
       email,
       gender,
-      profilePic,
       phoneNumber,
       role,
       classTeacherOf,
@@ -1584,13 +1637,68 @@ export const updateStaff = async (
       lgaOfOrigin,
     } = req.body;
 
+    if(!otherNames) {
+      delete req.body.otherNames;
+    }
+
+    if(!phoneNumber) {
+      delete req.body.phoneNumber;
+    }
+
+    if(classTeacherOf?.length == 0) {
+      delete req.body.classTeacherOf;
+    }
+
+    if(subjectTeacherOf?.length  == 0) {
+      delete req.body.subjectTeacherOf;
+    }
+
+    if(!stateOfOrigin) {
+      delete req.body.stateOfOrigin;
+    }
+
+    if(!lgaOfOrigin) {
+      delete req.body.lgaOfOrigin;
+    }
+
+    const {error} = Joi.object({
+      firstName: Joi.string().required().messages({
+        "any.required": "First name is required"
+      }),
+      otherNames: Joi.string().optional(),
+      surname: Joi.string().required().messages({
+        "any.required": "Surname is required"
+      }),
+      email: Joi.string().email().required().messages({
+        "any.required": "Email is required",
+        "string.email": "Kindly input a valid email address"
+      }),
+      gender: Joi.string().valid("male", "female").required().messages({
+        "any.required": "First name is required"
+      }),
+      phoneNumber: Joi.string().optional(),
+      role: Joi.string().valid("teacher", "admin", "record-keeper", "super-admin").required().messages({
+        "any.required": "First name is required"
+      }),
+      classTeacherOf: Joi.array().optional(),
+      subjectTeacherOf: Joi.array().optional(),
+      stateOfOrigin: Joi.string().optional(),
+      lgaOfOrigin: Joi.string().optional(),
+    }).validate(req.body);
+
+    if(error) {
+      res.status(400).send({
+        errorMessage: error.message
+      });
+      return;
+    }
+
     const updatedStaff = await staffsCollection.findByIdAndUpdate(id, {
-      firstName,
-      otherNames,
-      surname,
+      firstName: firstName[0].toLocaleUpperCase() + firstName.slice(1).trim(),
+      otherNames: otherNames[0].toLocaleUpperCase() + otherNames.slice(1).trim(),
+      surname: surname[0].toLocaleUpperCase() + surname.slice(1).trim(),
       email,
       gender,
-      profilePic,
       phoneNumber,
       role,
       classTeacherOf,

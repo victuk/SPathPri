@@ -3,6 +3,7 @@ import { CustomRequest } from "../middleware/authenticatedUsersOnly";
 import { staffsCollection } from "../models/staffs";
 import { schoolProfileCollection } from "../models/schoolProfile";
 import { schoolTemplateCollection } from "../models/schoolTemplateModel";
+import Joi from "joi";
 
 export const getSchoolTemplates = async (
   req: CustomRequest,
@@ -53,6 +54,24 @@ export const uploadSchoolTemplate = async (
   try {
     const { templateType, fileLink } = req.body;
 
+    const {error} = Joi.object({
+      templateType: Joi.string().valid("assignment-template", "curriculum-template", "result-stamp", "terminal-news-letter").required().messages({
+        "string.valid": `Template type can be either "assignment-template", "curriculum-template", "result-stamp" or "terminal-news-letter"`,
+        "any.required": "Template type is required"
+      }),
+      fileLink: Joi.string().uri().required().messages({
+        "string.url": "File link should be a valis url",
+        "any.required": "File link is required"
+      })
+    }).validate(req.body);
+
+    if(error) {
+      res.status(400).send({
+        errorMessage: error.message
+      });
+      return;
+    }
+
     const staffDetails = await staffsCollection.findById(
       req.userDetails?.userId
     );
@@ -92,6 +111,12 @@ export const deleteSchoolTemplate = async (
     try {
         
         const {id} = req.params;
+
+        if(!id) {
+          res.status(400).send({
+            errorMessage: "School template ID is required."
+          });
+        }
 
         const staffDetails = await staffsCollection.findById(req.userDetails?.userId);
 

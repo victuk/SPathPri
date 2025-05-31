@@ -9,6 +9,7 @@ import { staffsCollection } from "../models/staffs";
 import { studentsCollection, studentsCollectionType } from "../models/students";
 import { comparePassword, signJWT } from "../utils/authUtilities";
 import { StudentsScratchCardCollection } from "../models/studentsScratchCard";
+import Joi from "joi";
 
 const jwtKey = process.env.AUTH_KEY!!;
 
@@ -19,6 +20,18 @@ async function studentLogin(
 ) {
   try {
     const { scratchCardId, password } = req.body;
+
+    const {error} = Joi.object({
+      scratchCardId: Joi.string().required(),
+      password: Joi.string().required()
+    }).validate(req.body);
+
+    if(error) {
+      res.status(400).send({
+        errorMessage: error.message
+      });
+      return;
+    }
 
     const studentScratchCard = await StudentsScratchCardCollection.findOne({
       scratchCardId,
@@ -94,6 +107,18 @@ async function staffLogin(
 ) {
   try {
     let { email, password } = req.body;
+
+    const {error} = Joi.string().email({tlds: {allow: false}}).required().messages({
+      "string.email": "Kindly input a valid email address",
+      "any.required": "Email is required"
+    }).validate(req.body);
+
+    if(error) {
+      res.status(400).send({
+        errorMessage: error.message
+      });
+      return;
+    }
 
     const staffDetails: any = await staffsCollection
       .findOne({

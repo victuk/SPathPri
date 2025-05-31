@@ -2,6 +2,7 @@ import { NextFunction, Response } from 'express';
 import { CustomRequest } from '../middleware/authenticatedUsersOnly';
 import { assignmentCollection } from '../models/assignmentModel';
 import { timeTableCollection } from '../models/timetableModel';
+import Joi from 'joi';
 
 export const getTimetables = async (req: CustomRequest, res: Response, next: NextFunction) => {
     try {
@@ -86,6 +87,23 @@ export const createTimeTable = async (req: CustomRequest, res: Response, next: N
             fileLink
         } = req.body;
 
+        const {error} = Joi.object({
+            title: Joi.string().required().messages({
+                "any.required": "Title is required"
+            }),
+            fileLink: Joi.string().uri().required().messages({
+                "any.required": "File link is required",
+                "string.uri": "File link should be a valid url"
+            })
+        }).validate(req.body);
+
+        if(error) {
+            res.status(400).send({
+                errorMessage: error.message
+            });
+            return;
+        }
+
         const newTimetable = await timeTableCollection.create({
             uploadedById: req.userDetails!!.userId,
             title,
@@ -107,6 +125,13 @@ export const deleteTimeTable = async (req: CustomRequest, res: Response, next: N
     try {
 
         const { id } = req.params;
+
+        if(!id) {
+            res.status(400).send({
+                errorMessage: "Time table ID to be deleted not supplied"
+            });
+            return;
+        }
 
         const timeTableToDelete = await timeTableCollection.findById(id);
 

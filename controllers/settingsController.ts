@@ -6,10 +6,12 @@ import {
 } from "../models/staffs";
 import { OTPCollection } from "../models/otpManager";
 import {
+  comparePassword,
   genOTP,
   isTimeDifferenceGreaterThan30Minutes,
 } from "../utils/authUtilities";
 import { sendEmail } from "../utils/emailUtilities";
+import Joi from "joi";
 
 async function changePasswordForStaffs(
   req: CustomRequest,
@@ -19,9 +21,26 @@ async function changePasswordForStaffs(
   try {
     const { oldPassword, newPassword } = req.body;
 
-    if (oldPassword != newPassword) {
+    if (oldPassword === newPassword) {
       res.status(400).send({
-        message: "Passwords do not match",
+        message: "New password can't be the same as the old password",
+      });
+      return;
+    }
+
+    const {error} = Joi.object({
+      oldPassword: Joi.string().required().messages({
+        "any.required": "Old password is required"
+      }),
+      newPassword: Joi.string().min(8).alphanum().required().messages({
+        "any.required": "New password is required",
+        "string.min": "New password should be at least 8 characters long"
+      })
+    }).validate({oldPassword, newPassword});
+
+    if(error) {
+      res.status(400).send({
+        errorMessage: error.message
       });
       return;
     }
@@ -35,6 +54,14 @@ async function changePasswordForStaffs(
       return;
     }
 
+    const isNewPasswordSameAsFormerPassword = comparePassword(newPassword, userDetails.password);
+
+    if(isNewPasswordSameAsFormerPassword) {
+      res.status(400).send({
+        errorMessage: "New password can't be the same as the former password.",
+      });
+      return;
+    }
 
     const salt = bcrypt.genSaltSync(10);
     const hashedPassword = bcrypt.hashSync(newPassword, salt);
@@ -52,7 +79,7 @@ async function changePasswordForStaffs(
 
     await sendEmail({
       to: userDetails.email!!,
-      subject: "Solvpath - Password reset",
+      subject: "Solvpath - Password Reset",
       body: `
             <div>
               <div>Here is your OTP to change your password: ${otp}</div>
@@ -77,7 +104,7 @@ async function updatePasswordChangeForStaffs(
   try {
     const { tempId, otp } = req.body;
 
-    const otpDetails = await OTPCollection.findById(tempId);
+    const otpDetails = await OTPCollection.findOne({_id: tempId, userId: req.userDetails?.userId});
 
     if (!otpDetails) {
       res.status(400).json({
@@ -114,8 +141,7 @@ async function updatePasswordChangeForStaffs(
     await OTPCollection.findByIdAndDelete(tempId);
 
     res.send({
-      tempId: otpDetails._id,
-      message: "OTP to change password sent",
+      message: "Password changed successfully"
     });
   } catch (error) {
     next(error);

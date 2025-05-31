@@ -142,6 +142,13 @@ export const deleteSchoolClass = async (
   try {
     const { id } = req.params;
 
+    if(!id) {
+      res.status(400).send({
+        errorMessage: "Class ID can't be empty"
+      });
+      return;
+    }
+
     const classStudentCount = await studentsCollection
       .find({
         classId: id,
@@ -176,6 +183,13 @@ export const generateResult = async (
 ) => {
   try {
     const { classId } = req.body;
+
+    if(!classId) {
+      res.status(400).send({
+        errorMessage: "Class ID can't be empty"
+      });
+      return;
+    }
 
     const studentsInClass = await studentsCollection.find({ classId, schoolId: req.userDetails?.schoolId });
 
