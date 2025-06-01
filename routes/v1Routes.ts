@@ -508,8 +508,8 @@ v1Routes.get("/profile/staff", getStaffProfile);
 v1Routes.get("/profile/user/:id/:userType", getUserProfile);
 
 // Settings route
-v1Routes.put("/staff/change-password", changePasswordForStaffs);
-v1Routes.put("/staff/confirm-password-change", updatePasswordChangeForStaffs);
+v1Routes.put("/update-staff/change-password", changePasswordForStaffs);
+v1Routes.put("/update-staff/confirm-password-change", updatePasswordChangeForStaffs);
 
 // School session
 v1Routes.get("/school-session/:userType", getSchoolSessionDetails);

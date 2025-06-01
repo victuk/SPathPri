@@ -30,10 +30,12 @@ async function changePasswordForStaffs(
 
     const {error} = Joi.object({
       oldPassword: Joi.string().required().messages({
-        "any.required": "Old password is required"
+        "any.required": "Old password is required",
+        "string.empty": "Old password can not be empty",
       }),
       newPassword: Joi.string().min(8).alphanum().required().messages({
         "any.required": "New password is required",
+        "string.empty": "New password can not be empty",
         "string.min": "New password should be at least 8 characters long"
       })
     }).validate({oldPassword, newPassword});
@@ -50,6 +52,15 @@ async function changePasswordForStaffs(
     if (!userDetails) {
       res.status(404).send({
         message: "No user found",
+      });
+      return;
+    }
+
+    const isOldPasswordCorrect = comparePassword(oldPassword, userDetails.password);
+
+    if(!isOldPasswordCorrect) {
+      res.status(400).send({
+        errorMessage: "Old password is incorrect",
       });
       return;
     }
