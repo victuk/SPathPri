@@ -61,7 +61,7 @@ async function studentLogin(
     }
 
     const doPasswordsMatch = comparePassword(
-      password,
+      password.toString(),
       studentDetails!!.password
     );
 
@@ -143,7 +143,7 @@ async function staffLogin(
       return;
     }
 
-    const doPasswordsMatch = comparePassword(password, staffDetails.password);
+    const doPasswordsMatch = comparePassword(password.toString(), staffDetails.password);
 
     if (!doPasswordsMatch) {
       res.status(400).send({
