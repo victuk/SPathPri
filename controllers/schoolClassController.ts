@@ -5,7 +5,7 @@ import { schoolClassCollection } from "../models/classModel";
 import { studentsCollection } from "../models/students";
 import { read } from "fs";
 import { schoolProfileCollection } from "../models/schoolProfile";
-import { resultCollection } from "../models/resultModel";
+import { resultCollection, resultCollectionType } from "../models/resultModel";
 import { getOrdinalSuffix } from "../utils/ordinalSuffix";
 import { classPositionAndRemarksCollection } from "../models/classPositionAndRemarksModel";
 import { staffsCollection } from "../models/staffs";
@@ -213,7 +213,7 @@ export const generateResult = async (
 
     for (let i = 0; i < studentsInClass.length; i++) {
       const studentsRecord = classAssessments.filter(
-        (s) => s.studentId.toString() == studentsInClass[i]._id.toString()
+        (s: resultCollectionType) => s.studentId.toString() == studentsInClass[i]._id.toString()
       );
 
       let studentSubjectTotal = 0;
@@ -417,7 +417,7 @@ export const getResultRemark = async (
 
     const selectValue = "firstName surname otherNames gender studentUid profilePic";
 
-    if (req.userDetails?.role == "admin") {
+    if (req.userDetails?.role == "admin" || req.userDetails?.role == "super-admin") {
 
         if(!classId) {
             res.status(400).send({
@@ -464,9 +464,9 @@ export const updateResultRemark = async (
 
     const { remark } = req.body;
 
-    let updatedPrincipalsRemark: any;
+    var updatedPrincipalsRemark: any;
 
-    if (req.userDetails?.role == "admin") {
+    if (req.userDetails?.role == "admin" || req.userDetails?.role == "super-admin") {
       updatedPrincipalsRemark = await classPositionAndRemarksCollection.findByIdAndUpdate(positionId, {
         principalsRemark: remark,
       }, {new: true});

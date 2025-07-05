@@ -2,7 +2,7 @@ import { NextFunction, response, Response } from "express";
 import { CustomRequest } from "../middleware/authenticatedUsersOnly";
 import { studentsCollection } from "../models/students";
 import { staffsCollection } from "../models/staffs";
-import { genOTP, hashPassword } from "../utils/authUtilities";
+import { genOTP, hashPassword, signJWT, verifyJWT } from "../utils/authUtilities";
 import { sendEmail } from "../utils/emailUtilities";
 import { resultCollection } from "../models/resultModel";
 import { subjectCollection } from "../models/subjectCollection";
@@ -1735,6 +1735,50 @@ export const removeStaffFromSchool = async (
   }
 };
 
+export const getSingleStudentResultV2 = async (
+  req: CustomRequest,
+  res: Response,
+  next: NextFunction
+) => {
+  try {
+
+    const studentId = req.userDetails?.userId;
+
+    const schoolId = req.userDetails?.schoolId;
+
+    const {term, year, classId} = req.body;
+
+    // const studentDetails = await studentsCollection.findById(
+    //   req.userDetails?.userId
+    // );
+
+    // const schoolDetails = await schoolProfileCollection.findById(
+    //   studentDetails?.schoolId
+    // );
+
+    const studentRecord = await resultCollection.find(
+      {
+        studentId,
+        term,
+        year,
+        studentClass: classId,
+        schoolId,
+      }
+    )
+    .populate("studentId", "-password")
+    .populate("teacherId", "-password")
+    .populate("subjectId")
+    .populate("studentClass");
+
+    res.send({
+      message: "Student records retrieved successfully",
+      result: studentRecord,
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
 export const promoteStudents = async (
   req: CustomRequest,
   res: Response,
@@ -1766,6 +1810,56 @@ export const promoteStudents = async (
     next(error);
   }
 };
+
+// Enable super admin to switch from one school to another
+export const changeSuperAdminSchool = async (
+  req: CustomRequest,
+  res: Response,
+  next: NextFunction
+) => {
+  try {
+    
+    const {newSchoolId} = req.body;
+
+    if(!newSchoolId) {
+      res.status(422).send({
+        message: "School ID to switch to not provided."
+      });
+      return;
+    }
+
+    const schoolDetails = await schoolProfileCollection.findById(newSchoolId);
+
+    if(!schoolDetails) {
+      res.status(404).send({
+        message: "School not found"
+      });
+      return;
+    }
+
+    const authDetails: any = verifyJWT(req.headers.authorization?.split(" ")[1] as string);
+
+    const newAuthDetails = {
+      userId: authDetails?.userId,
+      fullName: authDetails?.fullName,
+      role: authDetails.role,
+      accountStatus: authDetails.accountStatus,
+      deviceId: authDetails?.deviceId,
+      schoolId: newSchoolId
+    };
+
+    const newJWT = signJWT(newAuthDetails);
+
+    res.send({
+      message: "School switched successfully",
+      newJWT,
+      schoolDetails
+    });
+
+  } catch (error) {
+    next(error);
+  }
+}
 
 // const addStaffByEmail = async (
 //   req: CustomRequest,

@@ -10,6 +10,10 @@ import { studentsCollection, studentsCollectionType } from "../models/students";
 import { comparePassword, signJWT } from "../utils/authUtilities";
 import { StudentsScratchCardCollection } from "../models/studentsScratchCard";
 import Joi from "joi";
+import { v4 } from "uuid";
+import { userSessionCollection } from "../models/userSessionModel";
+import { verifyRefreshToken } from "../utils/authUtilities"
+import { redisClient } from "../utils/redisClientUtil";
 
 const jwtKey = process.env.AUTH_KEY!!;
 
@@ -108,9 +112,14 @@ async function staffLogin(
   try {
     let { email, password } = req.body;
 
-    const {error} = Joi.string().email({tlds: {allow: false}}).required().messages({
-      "string.email": "Kindly input a valid email address",
-      "any.required": "Email is required"
+    const {error} = Joi.object({
+      email: Joi.string().email({tlds: {allow: false}}).required().messages({
+        "string.email": "Kindly input a valid email address",
+        "any.required": "Email is required"
+      }),
+      password: Joi.string().required().messages({
+        "any.required": "Password is required"
+      })
     }).validate(req.body);
 
     if(error) {
@@ -180,6 +189,113 @@ async function staffLogin(
   }
 }
 
+const logOut = async (
+  req: CustomRequest,
+  res: Response,
+  next: NextFunction
+) => {
+  try {
+    const refreshToken = req.cookies.refreshToken;
+    if (refreshToken) {
+        const value: any = verifyRefreshToken(refreshToken);
+        if(value) {
+          const sessionDetails = await userSessionCollection.findOneAndDelete({deviceId: value?.deviceId});
+          await redisClient.del(sessionDetails?.deviceId!!);
+        }
+    }
+
+    res.clearCookie('refreshToken', { httpOnly: true, secure: true, sameSite: 'none' });
+    res.status(200).json({ message: 'Logged out successfully' });
+  } catch (error) {
+    next(error);
+  }
+}
+
+const refreshCurrentToken = async (
+  req: CustomRequest,
+  res: Response,
+  next: NextFunction
+) => {
+  try {
+    
+    const expiredAccessToken = req.headers.authorization;
+
+    if (!expiredAccessToken) {
+        return res.status(401).json({ message: 'Refresh token not found' });
+    }
+
+    const value: any = jwt.decode(expiredAccessToken.split(" ")[1]);
+
+    if(!value) {
+      return res.status(401).json({ message: 'Invalid session', action: "log-user-out" });
+    }
+
+    const timeDifference = Math.abs(Date.now() - (value.exp * 1000));
+    const ONE_MINUTE_IN_MS = 1 * 60 * 1000;
+    // console.log(`Difference is ${timeDifference / 1000 / 60} minutes.`);
+    // console.log(timeDifference > ONE_MINUTE_IN_MS);
+
+    // const redisResult = await redisClient.get(`${value.userId}----${value.deviceId}`);
+
+    if(timeDifference > ONE_MINUTE_IN_MS) {
+      return res.status(401).json({ message: 'Your session has expired, kindly login', action: "log-user-out" });
+    }
+
+    // await redisClient.del(`${value.userId}----${value.deviceId}`);
+
+    let userDetails: any;
+    let userRole: any;
+    if(value.role == "student") {
+      userDetails = await studentsCollection.findById(value.userId);
+      userRole = "student";
+    } else {
+      userDetails = await staffsCollection.findById(value.userId);
+      userRole = userDetails?.role;
+    }
+
+    const newDeviceId = v4();
+
+
+    // const userAgent = req.useragent;
+
+    const newAccessToken = signJWT({
+      userId: userDetails?.id,
+      fullName: `${userDetails?.firstName} ${userDetails?.surname}`,
+      email: userDetails?.email,
+      role: userRole,
+      accountStatus: userDetails?.accountStatus,
+      schoolId: userDetails?.schoolId ? (userDetails.schoolId).toString() : null,
+      deviceId: newDeviceId
+    });
+
+    // const v: any = decode(newAccessToken);
+
+    // await redisClient.set(`${userDetails.userId}----${newDeviceId}`, JSON.stringify({
+    //   jwt: newAccessToken, expiryDate: v.exp
+    // }));
+
+    // await userSessionCollection.findOne({userId: value?.userId, deviceId: value?.deviceId}, {
+    //   deviceId: newDeviceId,
+    //   lastLogin: new Date()
+    // });
+    
+  res.send({
+    newAccessToken
+  });
+
+  } catch (error: any) {
+    if(error.name === "TokenExpiredError"){
+      res.clearCookie('refreshToken', { httpOnly: true, secure: true, sameSite: 'strict' });
+      res.status(401).send({
+          errorMessage: "Refresh token expired",
+          action: "log-user-out"
+      });
+      return;
+  }
+    next(error);
+  }
+}
+
 const getStaffDetailsBeforeLogin = async (
   req: CustomRequest,
   res: Response,
@@ -224,6 +340,8 @@ const getStudentDetailsBeforeLogin = async (
 export {
   studentLogin,
   staffLogin,
+  logOut,
+  refreshCurrentToken,
   getStaffDetailsBeforeLogin,
   getStudentDetailsBeforeLogin,
 };

@@ -34,8 +34,23 @@ mongoose.connect(`${process.env.MONGO}`)
 // app.set('views', path.join(__dirname, 'views'));
 // app.set('view engine', 'jade');
 
+const allowedOrigins = ["http://localhost:5173", "http://primarysch.solvpath-eportal.com"];
+
 app.use(logger('dev'));
-app.use(cors({origin: "*"}));
+app.use(cors({
+  origin: allowedOrigins,
+  // origin: function (origin, callback) {
+  //   // Check if the requesting origin is in our allowed list
+  //   if (!origin || allowedOrigins.indexOf(origin) !== -1) {
+  //     callback(null, true); // Allow the request
+  //   } else {
+  //     callback(new Error('Not allowed by CORS')); // Deny the request
+  //   }
+  // },
+  methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'], // Allowed methods
+  allowedHeaders: ['Content-Type', 'Authorization', "schoolId"],
+  credentials: true
+}));
 app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
 // app.use(

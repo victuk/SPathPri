@@ -2,8 +2,8 @@ import bcrypt from "bcrypt";
 import jwt from "jsonwebtoken";
 import "dotenv/config";
 import CryptoJS from "crypto-js";
-
-type UserType = "buyer" | "shopper" | "shopAdmin";
+import { userSessionCollection } from "../models/userSessionModel";
+import { redisClient } from "./redisClientUtil";
 
 function hashPassword(password:string) {
     return bcrypt.hashSync(password.toString(), bcrypt.genSaltSync(10));
@@ -14,13 +14,62 @@ function comparePassword(userPassword:string, databasePassword:string) {
 }
 
 function signJWT(payload: object | string) {
-    return jwt.sign(payload, process.env.AUTH_KEY as string);
+    return jwt.sign(
+        payload,
+        process.env.AUTH_KEY as string,
+        { expiresIn: process.env.ACCESS_TOKEN_EXPIRATION });
 }
+
+const generateRefreshToken = async (payload: {userId: string, role: string, userAgent: any, deviceId: string}) => {
+
+    
+
+    const refreshToken = jwt.sign(
+        payload, // Keep refresh token payload minimal
+        process.env.REFRESH_TOKEN_SECRET as string,
+        { expiresIn: process.env.REFRESH_TOKEN_EXPIRATION }
+    );
+
+    const userSession = await userSessionCollection.findOne({userId: payload.userId});
+
+    if(userSession) {
+        const sessionDetails = await userSessionCollection.findByIdAndUpdate(userSession._id, {
+            userId: payload.userId,
+            role: payload.role,
+            deviceId: payload.deviceId,
+            refreshToken: refreshToken,
+            platform: payload.userAgent.platform,
+            browser: payload.userAgent.browser,
+            lastLogin: new Date()
+        });
+
+        redisClient.set(payload.deviceId, JSON.stringify(sessionDetails), "EX", 7 * 24 * 60 * 60);
+
+    } else {
+        const sessionDetails = await userSessionCollection.create({
+            userId: payload.userId,
+            role: payload.role,
+            deviceId: payload.deviceId,
+            refreshToken: refreshToken,
+            platform: payload.userAgent.platform,
+            browser: payload.userAgent.browser,
+            lastLogin: new Date()
+        });
+
+        redisClient.set(payload.deviceId, JSON.stringify(sessionDetails), "EX", 7 * 24 * 60 * 60);
+    }
+
+    return refreshToken;
+};
+
 
 function verifyJWT(payload: string) {
     return jwt.verify(payload, process.env.AUTH_KEY as string);
 }
 
+function verifyRefreshToken(payload: string) {
+    return jwt.verify(payload, process.env.REFRESH_TOKEN_SECRET as string);
+}
 
 // const CryptoJS = require('crypto-js');
 
@@ -49,6 +98,7 @@ function isTimeDifferenceGreaterThan30Minutes(date1:Date, date2: Date) {
 }
 
 export {
+    generateRefreshToken,
     hashPassword,
     comparePassword,
     signJWT,
@@ -56,5 +106,6 @@ export {
     encryptWithAES,
     decryptWithAES,
     genOTP,
+    verifyRefreshToken,
     isTimeDifferenceGreaterThan30Minutes,
 }

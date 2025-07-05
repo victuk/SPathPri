@@ -6,6 +6,8 @@ import {
 import {
   getStaffDetailsBeforeLogin,
   getStudentDetailsBeforeLogin,
+  logOut,
+  refreshCurrentToken,
   staffLogin,
   studentLogin,
 } from "../controllers/loginController";
@@ -18,10 +20,15 @@ import {
   updateAnnouncement,
 } from "../controllers/announcementsController";
 import {
+  affectiveAssessments,
   assessment,
   assessments,
+  createAffectiveAssessment,
   createAssessment,
+  deleteAffectiveAssessment,
   deleteAssessment,
+  getClassTeacherClasses,
+  // updateAffectiveAssessment,
   updateAssessment,
 } from "../controllers/assessmentController";
 import {
@@ -35,6 +42,7 @@ import {
 import {
   approveOrDeclineResultUpdate,
   changeStudentsClass,
+  changeSuperAdminSchool,
   createStaff,
   createStudent,
   CSVStaffByRole,
@@ -153,7 +161,7 @@ import {
   resetAttendance,
   updateAttendance,
 } from "../controllers/attendanceController";
-import { generatePDF } from "../controllers/generatePDFController";
+import { generatePDF, generateResultV2 } from "../controllers/generatePDFController";
 import { sendTextMessages } from "../utils/sendTextUtil";
 import roleBasedAccess from "../middleware/roleBasedAccess";
 import { sendEmail } from "../utils/emailUtilities";
@@ -170,8 +178,8 @@ import { studentPositionAndRemark } from "../models/positionAndRemarksModel";
 import { AttendanceCollection } from "../models/studentsAttendance";
 import { staffsCollection } from "../models/staffs";
 import { Types } from "mongoose";
-import { changePasswordForStaffs, updatePasswordChangeForStaffs } from "../controllers/settingsController";
 import { changeFeedbackTicketStatus, createFeedback, getOthersFeedbacks, getSubmittedFeedbacks, reopenFeedbackTicket, viewFeedback } from "../controllers/feedbackController";
+import { changePasswordForStaffs, updatePasswordChangeForStaffs } from "../controllers/settingsController";
 
 const v1Routes = Router();
 
@@ -320,13 +328,32 @@ v1Routes.get("/normalize-assessment", async (req, res, next) => {
   }
 });
 
+v1Routes.get("/normalize-cat-three", async (req, res, next) => {
+  try {
+    
+    await resultCollection.updateMany({
+      testThree: null
+    }, {testThree: 0});
+
+    res.send({
+      message: "Done"
+    });
+
+  } catch (error) {
+    next(error);
+  }
+});
+
 v1Routes.post("/student-login", studentLogin);
 v1Routes.post("/staff-login", staffLogin);
+v1Routes.post("/logout", logOut);
 v1Routes.get(
   "/student-detail-before-login/:scratchCardId",
   getStudentDetailsBeforeLogin
 );
 v1Routes.get("/staff-detail-before-login/:email", getStaffDetailsBeforeLogin);
+
+v1Routes.get("/rotate-token", refreshCurrentToken);
 
 v1Routes.use(authenticatedUsersOnly);
 
@@ -399,12 +426,12 @@ v1Routes.get("/single-student-result/:page/:limit", getSingleStudentResult);
 v1Routes.put(`/student-result/:recordId`, updateStudentResult);
 v1Routes.put(
   "/students-class",
-  roleBasedAccess(["admin", "teacher"]),
+  roleBasedAccess(["super-admin", "admin", "teacher"]),
   changeStudentsClass
 );
 v1Routes.put(
   "/promote-students",
-  roleBasedAccess(["admin", "teacher"]),
+  roleBasedAccess(["super-admin", "admin", "teacher"]),
   promoteStudents
 );
 v1Routes.put("/generate-result", generateResult);
@@ -423,7 +450,7 @@ v1Routes.get(
 );
 v1Routes.post(
   "/create-result-update-request",
-  roleBasedAccess(["record-keeper", "admin"]),
+  roleBasedAccess(["record-keeper", "admin", "super-admin"]),
   resultUpdateRequest
 );
 v1Routes.put(
@@ -543,6 +570,67 @@ v1Routes.post("/feedback", createFeedback);
 v1Routes.put("/feedback-status/:id", changeFeedbackTicketStatus);
 v1Routes.put("/reopen-feedback/:id", reopenFeedbackTicket);
 
+// Affective assessment
+v1Routes.get("/affective-assessment/get-teacher-class", getClassTeacherClasses);
+v1Routes.post("/affective-assessment/affective-assessment/:page/:limit", affectiveAssessments);
+v1Routes.post("/affective-assessment/create", createAffectiveAssessment);
+// v1Routes.put("/affective-assessment/:id", updateAffectiveAssessment);
+v1Routes.delete("/affective-assessment/:id", deleteAffectiveAssessment);
+
 v1Routes.post("/generate-pdf", generatePDF);
+
+v1Routes.post("/generate-my-result", async (req: CustomRequest, res: Response, next: NextFunction) => {
+  let fileToDelete: any;
+  try {
+    const fileLink = await generateResultV2(req.userDetails!!.userId, req.userDetails!!.schoolId!!, "student", req.body.term, req.body.year, req.body.classId);
+
+    fileToDelete = fileLink;
+    
+    res.send(fileLink);
+    
+  } catch (error) {
+    next(error);
+  } finally {
+    if(fileToDelete) {
+      fs.unlinkSync(fileToDelete);
+    }
+  }
+});
+
+v1Routes.post("/generate-student-result", async (req: CustomRequest, res: Response, next: NextFunction) => {
+  let fileToDelete: any;
+  try {
+    
+    const {studentId} = req.body;
+    
+    const studentDetails = await studentsCollection.findById(studentId);
+    
+    if (!studentDetails) {
+      res.send({
+        message: "Student details not found"
+      });
+      return;
+    }
+    
+    const fileLink = await generateResultV2(studentId, studentDetails!!.schoolId as string, "student", req.body.term, req.body.year, req.body.classId);
+
+    fileToDelete = fileLink;
+    
+    res.send(fileLink);
+    
+  } catch (error) {
+    next(error);
+  } finally {
+    if(fileToDelete) {
+      fs.unlinkSync(fileToDelete);
+    }
+  }
+});
+
+v1Routes.put("/change-super-admin-school", roleBasedAccess(["super-admin"]), changeSuperAdminSchool);
+
+v1Routes.post("/test-for-axios", async (req: CustomRequest, res: Response, next: NextFunction) => {
+  res.status(400).send({message: "here"});
+});
 
 export default v1Routes;
