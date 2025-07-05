@@ -243,3 +243,38 @@ export const reopenFeedbackTicket = async (
         next(error);
     }
 }
+
+
+export const anonymousFeedback = async (req: CustomRequest,
+    res: Response,
+    next: NextFunction) => {
+        try {
+
+            const {fullName,
+                email,
+                phoneNumber,
+                title,
+                feedback} = req.body;
+
+            await sendEmail({
+                to: email,
+                subject: `Solvpath - Complaint [[${title}]]`,
+                body: `
+                    <div>
+                        <div>Full Name: ${fullName}</div>
+                        <div>Email: ${email}</div>
+                        <div>Phone number: ${phoneNumber}</div>
+                        <div>Subject: ${title}</div>
+                        <div>Feedback/Complaint: ${feedback}</div>
+                    </div>
+                `
+            });
+
+            res.send({
+                message: "Email Sent"
+            });
+
+        } catch (error) {
+            next(error);
+        }
+}

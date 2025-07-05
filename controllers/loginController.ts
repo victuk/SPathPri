@@ -309,6 +309,13 @@ const getStaffDetailsBeforeLogin = async (
       "profilePic firstName otherNames surname role"
     );
 
+    if(!staffDetails) {
+      res.status(404).send({
+        message: "Staff not found"
+      });
+      return;
+    }
+
     res.send({
       result: staffDetails,
     });
@@ -328,6 +335,13 @@ const getStudentDetailsBeforeLogin = async (
     const studentDetails = await StudentsScratchCardCollection.findOne({
       scratchCardId,
     }).populate("studentId", "profilePic firstName otherNames surname");
+
+    if(!studentDetails) {
+      res.status(404).send({
+        message: "Student not found"
+      });
+      return;
+    }
 
     res.send({
       result: studentDetails?.studentId,

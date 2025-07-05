@@ -178,7 +178,7 @@ import { studentPositionAndRemark } from "../models/positionAndRemarksModel";
 import { AttendanceCollection } from "../models/studentsAttendance";
 import { staffsCollection } from "../models/staffs";
 import { Types } from "mongoose";
-import { changeFeedbackTicketStatus, createFeedback, getOthersFeedbacks, getSubmittedFeedbacks, reopenFeedbackTicket, viewFeedback } from "../controllers/feedbackController";
+import { anonymousFeedback, changeFeedbackTicketStatus, createFeedback, getOthersFeedbacks, getSubmittedFeedbacks, reopenFeedbackTicket, viewFeedback } from "../controllers/feedbackController";
 import { changePasswordForStaffs, updatePasswordChangeForStaffs } from "../controllers/settingsController";
 
 const v1Routes = Router();
@@ -354,6 +354,8 @@ v1Routes.get(
 v1Routes.get("/staff-detail-before-login/:email", getStaffDetailsBeforeLogin);
 
 v1Routes.get("/rotate-token", refreshCurrentToken);
+
+v1Routes.post("/anonymous-feedback", anonymousFeedback);
 
 v1Routes.use(authenticatedUsersOnly);
 
