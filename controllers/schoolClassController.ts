@@ -193,6 +193,13 @@ export const generateResult = async (
 
     const studentsInClass = await studentsCollection.find({ classId, schoolId: req.userDetails?.schoolId });
 
+    if(studentsInClass.length == 0) {
+      res.status(422).send({
+        message: `There are no students in this class.`
+      });
+      return;
+    }
+
     const schoolDetails = await schoolProfileCollection.findById(
       req.userDetails?.schoolId
     );
@@ -207,7 +214,25 @@ export const generateResult = async (
       schoolId: schoolDetails?._id,
     });
 
-    const subjects = await subjectCollection.find({});
+    let studentsWithScore = 0;
+
+    for(let i = 0; i < studentsInClass.length; i++) {
+      const studentSubject = classAssessments.filter(s => (s.studentId).toString() == (studentsInClass[i]._id).toString());
+      if(studentSubject.length > 5) {
+        studentsWithScore++;
+      }
+    }
+
+    if(studentsWithScore < Math.ceil(studentsInClass.length / 2)) {
+      res.status(422).send({
+        message: `Out of ${studentsInClass.length} students in class, only ${studentsWithScore} student(s) has at least 5 subject's assessment. Kindly add more student's assessments to continue`
+      });
+      return;
+    }
+
+    const done = await generateSubjectResult(schoolDetails!!.currentTerm, schoolDetails!!.currentYear, classId, (schoolDetails!!._id).toString());
+    console.log("Generated student's result", done);
+    // const subjects = await subjectCollection.find({});
 
     const studentsAverage: any[] = [];
 
@@ -240,14 +265,14 @@ export const generateResult = async (
       });
     }
 
-    for (let i = 0; i < subjects.length; i++) {
-      const studentOffersSubject = classAssessments.filter(
-        (s) => s.subjectId.toString() == subjects[i].id
-      );
+    // for (let i = 0; i < subjects.length; i++) {
+    //   const studentOffersSubject = classAssessments.filter(
+    //     (s) => s.subjectId.toString() == subjects[i].id
+    //   );
 
-      // if (studentOffersSubject.length > 0) {
-      // }
-    }
+    //   // if (studentOffersSubject.length > 0) {
+    //   // }
+    // }
 
     studentsAverage.sort(
       (a, b) => b.studentSubjectAverage - a.studentSubjectAverage
@@ -277,11 +302,15 @@ export const generateResult = async (
     const resultsAlreadyGenerated =
       await classPositionAndRemarksCollection.find({
         studentClass: classId,
+        term: schoolDetails?.currentTerm,
+        year: schoolDetails?.currentYear,
         schoolId: schoolDetails?._id,
       });
 
     await classPositionAndRemarksCollection.deleteMany({
       studentClass: classId,
+      term: schoolDetails?.currentTerm,
+      year: schoolDetails?.currentYear,
       schoolId: schoolDetails?._id,
     });
 
@@ -311,6 +340,37 @@ export const generateResult = async (
     next(error);
   }
 };
+
+export const generateSubjectResult = async (term: string, year: string, classId: string, schoolId: string) => {
+  try {
+    const subjects = await subjectCollection.find({});
+    const classAssessments = await resultCollection.find({
+      studentClass: classId,
+      term,
+      year,
+      schoolId,
+    });
+
+    for(let i = 0; i < subjects.length; i++) {
+      classAssessments.filter((c) => (c?.subjectId).toString() == (subjects[i]?._id).toString()).sort((a, b) => {
+        const studentA = a.testOne + a.testTwo + a.testThree + a.examScore;
+        const studentB = b.testOne + b.testTwo + b.testThree + b.examScore;
+        return studentB - studentA;
+      }).forEach(async (student, index) => {
+        await resultCollection.findByIdAndUpdate(student._id, {
+          subjectPosition: index + 1
+        });
+      });
+    }
+
+    return {
+      message: "Student test generated"
+    };
+
+  } catch (error) {
+    throw new Error("An error ocurred while tring to generate subject results");
+  }
+}
 
 export const refreshStudentsClassSubjects = async (
   req: CustomRequest,

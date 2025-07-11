@@ -180,6 +180,7 @@ export const generateResultV2 = async (
                       <th style="padding: 5px;"><div style="font-size: 12px;">Total (100%)</div></th>
                       <th style="padding: 5px;"><div style="font-size: 12px;">Grade</div></th>
                       <th style="padding: 5px;"><div style="font-size: 12px;">Subject Average</div></th>
+                      <th style="padding: 5px;"><div style="font-size: 12px;">Subject Position</div></th>
                       <th style="padding: 5px;"><div style="font-size: 12px;">Remark</div></th>
                   </tr>
                   ${response
@@ -188,15 +189,16 @@ export const generateResultV2 = async (
                       (d: resultCollectionType | any, index: number) =>
                         `<tr style="padding: 4px; font-size: 12px;">
                             <td style="paddng: 5px;"><div style="padding: 2px; text-align: center; width: 100%;">${index + 1}</div></td>
-                            <td style="paddng: 5px;"><div style="padding: 2px; width: 100%;">${d.subjectId.subject}</div></td>
+                            <td style="paddng: 5px;"><div style="padding: 2px; width: 100%;">${d?.subjectId?.subject}</div></td>
                             <td style="paddng: 5px;"><div style="padding: 2px; text-align: center;">${d?.testOne}</div></td>
-                            <td style="paddng: 5px;"><div style="padding: 2px; text-align: center;">${d.testTwo}</div></td>
-                            <td style="paddng: 5px;"><div style="padding: 2px; text-align: center;">${d.testThree}</div></td>
-                            <td style="paddng: 5px;"><div style="padding: 2px; text-align: center;">${d.examScore}</div></td>
-                            <td style="paddng: 5px;"><div style="padding: 2px; text-align: center;">${d.testsAndExamTotal}</div></td>
-                            <td style="paddng: 5px;"><div style="padding: 2px; text-align: center;">${d.grade}</div></td>
-                            <td style="paddng: 5px;"><div style="padding: 2px; text-align: center;">${d.subjectAverage}</div></td>
-                            <td style="paddng: 5px;"><div style="padding: 2px; text-align: center;">${d.remark}</div></td>
+                            <td style="paddng: 5px;"><div style="padding: 2px; text-align: center;">${d?.testTwo}</div></td>
+                            <td style="paddng: 5px;"><div style="padding: 2px; text-align: center;">${d?.testThree}</div></td>
+                            <td style="paddng: 5px;"><div style="padding: 2px; text-align: center;">${d?.examScore}</div></td>
+                            <td style="paddng: 5px;"><div style="padding: 2px; text-align: center;">${d?.testsAndExamTotal}</div></td>
+                            <td style="paddng: 5px;"><div style="padding: 2px; text-align: center;">${d?.grade}</div></td>
+                            <td style="paddng: 5px;"><div style="padding: 2px; text-align: center;">${d?.subjectAverage}</div></td>
+                            <td style="paddng: 5px;"><div style="padding: 2px; text-align: center;">${d?.subjectPosition}</div></td>
+                            <td style="paddng: 5px;"><div style="padding: 2px; text-align: center;">${d?.remark}</div></td>
                         </tr>`
                     )
                     .join("")}
