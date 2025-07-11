@@ -1631,6 +1631,7 @@ export const updateStaff = async (
       gender,
       phoneNumber,
       role,
+      profilePic,
       classTeacherOf,
       subjectTeacherOf,
       stateOfOrigin,
@@ -1673,6 +1674,9 @@ export const updateStaff = async (
         "any.required": "Email is required",
         "string.email": "Kindly input a valid email address"
       }),
+      profilePic: Joi.string().required().messages({
+        "any.required": "Profile picture is required"
+      }),
       gender: Joi.string().valid("male", "female").required().messages({
         "any.required": "First name is required"
       }),
@@ -1700,6 +1704,7 @@ export const updateStaff = async (
       email,
       gender,
       phoneNumber,
+      profilePic,
       role,
       classTeacherOf,
       subjectTeacherOf,
