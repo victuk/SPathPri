@@ -12,6 +12,10 @@ const StudentsScratchCardSchema = new Schema({
         ref: "students",
         default: null
     },
+    remainingUsageNumber: {
+        type: Number,
+        default: 5
+    },
     term: {
         type: String,
         required: true

@@ -475,6 +475,8 @@ export const getResultRemark = async (
 
     let result: any;
 
+    const schoolDetails = await schoolProfileCollection.findById(req.userDetails?.userId);
+
     const selectValue = "firstName surname otherNames gender studentUid profilePic";
 
     if (req.userDetails?.role == "admin" || req.userDetails?.role == "super-admin") {
@@ -488,6 +490,8 @@ export const getResultRemark = async (
 
       result = await classPositionAndRemarksCollection.find({
         studentClass: classId,
+        term: schoolDetails?.currentTerm,
+        year: schoolDetails?.currentYear
       }).populate("studentId", selectValue).populate("studentClass");
     } else if (req.userDetails?.role == "teacher") {
       const teacherProfile = await staffsCollection.findById(
@@ -503,6 +507,8 @@ export const getResultRemark = async (
 
       result = await classPositionAndRemarksCollection.find({
         studentClass: teacherProfile?.classTeacherOf,
+        term: schoolDetails?.currentTerm,
+        year: schoolDetails?.currentYear
       }).populate("studentId", selectValue).populate("studentClass");
     }
 

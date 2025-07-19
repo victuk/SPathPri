@@ -48,6 +48,13 @@ async function studentLogin(
       return;
     }
 
+    if(studentScratchCard.remainingUsageNumber == 0) {
+      res.status(401).send({
+        message: "You have reached your scratch card limit for the term. Kindly contact the admin.",
+      });
+      return;
+    }
+
     const studentId = studentScratchCard.studentId;
 
     const studentDetails: any = await studentsCollection
@@ -76,7 +83,9 @@ async function studentLogin(
       return;
     }
 
-    console.log(studentDetails.schoolId);
+    await StudentsScratchCardCollection.findOneAndUpdate({
+      scratchCardId,
+    }, {$inc: {remainingUsageNumber: -1}});
 
     const jwt = signJWT({
       userId: studentDetails.id,
