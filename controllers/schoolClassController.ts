@@ -475,7 +475,7 @@ export const getResultRemark = async (
 
     let result: any;
 
-    const schoolDetails = await schoolProfileCollection.findById(req.userDetails?.userId);
+    const schoolDetails = await schoolProfileCollection.findById(req.userDetails?.schoolId);
 
     const selectValue = "firstName surname otherNames gender studentUid profilePic";
 
