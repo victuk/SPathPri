@@ -34,7 +34,7 @@ mongoose.connect(`${process.env.MONGO}`)
 // view engine setup
 // app.set('views', path.join(__dirname, 'views'));
 // app.set('view engine', 'jade');
-const allowedOrigins = ["http://localhost:5173", "http://localhost:5174", "https://secondarysch.solvpath-eportal.com"];
+const allowedOrigins = ["http://localhost:5173", "http://localhost:5174", "https://primarysch.solvpath-eportal.com"];
 // const allowedOrigins = ["*"];
 
 app.use(logger('dev'));
