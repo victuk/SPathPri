@@ -56,6 +56,7 @@ export const createSchool = async (req: CustomRequest, res: Response, next: Next
             location,
             schoolEmail,
             schoolPhoneNumber,
+            schoolGradingSystem,
             currentTerm,
             currentYear
         } = req.body;
@@ -72,7 +73,12 @@ export const createSchool = async (req: CustomRequest, res: Response, next: Next
             schoolMotto: Joi.string().required().messages({
                 "any.required": "School motto can't be empty"
             }),
-            location: Joi.string().required(),
+            schoolGradingSystem: Joi.string().required().messages({
+                "any.required": "Grading system can't be empty"
+            }),
+            location: Joi.string().required().messages({
+                "any.required": "Address can't be empty"
+            }),
             schoolEmail: Joi.string().email({tlds: {allow: false}}).required().messages({
                 "string.email": "School email has to be a vaid email address",
                 "any.required": "School email is required"
@@ -119,6 +125,7 @@ export const createSchool = async (req: CustomRequest, res: Response, next: Next
             schoolUid: await createSchoolId(schoolName),
             schoolLogo,
             schoolMotto,
+            gradingSystem: schoolGradingSystem,
             location,
             schoolEmail,
             schoolPhoneNumber,
@@ -139,13 +146,13 @@ export const updateSchool = async (req: CustomRequest, res: Response, next: Next
     try {
         
         const {
-            ownerName,
             schoolName,
-            // schoolLogo,
-            schoolAddress,
-            email,
+            schoolLogo,
+            location,
+            schoolEmail,
+            schoolGradingSystem,
             phoneNumber,
-            motto
+            schoolMotto
         } = req.body;
 
         const {id} = req.params;
@@ -162,24 +169,32 @@ export const updateSchool = async (req: CustomRequest, res: Response, next: Next
                 "string.min": "School name can not be less than 5 characters",
                 "any.required": "School name can't be empty"
             }),
+            schoolLogo: Joi.string().required().messages({
+                "any.required": "School logo can't be empty"
+            }),
             schoolMotto: Joi.string().required().messages({
                 "any.required": "School motto can't be empty"
             }),
-            location: Joi.string().required(),
+            location: Joi.string().required().messages({
+                "any.required": "School address can't be empty"
+            }),
             schoolEmail: Joi.string().email({tlds: {allow: false}}).required().messages({
                 "string.email": "School email has to be a vaid email address",
                 "any.required": "School email is required"
+            }),
+            schoolGradingSystem: Joi.string().required().messages({
+                "any.required": "Grading system can not be empty"
             }),
             schoolPhoneNumber: Joi.string().min(11).required().messages({
                 "string.min": "School phone number should be at lest 11 characters",
                 "any.required": "School phone number can not be empty"
             }),
-            currentTerm: Joi.string().required().messages({
-                "any.requried": "Current term can't be empty"
-            }),
-            currentYear: Joi.string().required().messages({
-                "any.requried": "Current term can't be empty"
-            })
+            // currentTerm: Joi.string().required().messages({
+            //     "any.requried": "Current term can't be empty"
+            // }),
+            // currentYear: Joi.string().required().messages({
+            //     "any.requried": "Current term can't be empty"
+            // })
         }).validate(req.body);
 
         if(error) {
@@ -199,13 +214,13 @@ export const updateSchool = async (req: CustomRequest, res: Response, next: Next
         }
 
         const updatedSchool = await schoolProfileCollection.findByIdAndUpdate(id, {
-            ownerName,
             schoolName,
-            // schoolLogo,
-            schoolAddress,
-            email,
+            schoolLogo,
+            location,
+            schoolEmail,
+            gradingSystem: schoolGradingSystem,
             phoneNumber,
-            motto
+            schoolMotto
         }, {new: true});
 
         res.send({
@@ -221,8 +236,6 @@ export const getMySchoolDetails = async (req: CustomRequest, res: Response, next
     try {
 
         const schoolId = req.userDetails?.schoolId;
-
-        console.log("req.userDetails", req.userDetails);
 
         const schoolDetails = await schoolProfileCollection.findById(schoolId);
 

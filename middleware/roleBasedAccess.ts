@@ -9,7 +9,7 @@ const roleBasedAccess = (role: string[]) => {
                 next();
             } else {
                 res.status(403).send({
-                    message: "unauthorized-request"
+                    message: `Unauthorized request: Only ${role.map(s => s + "s").join(", ")} can take this action.`
                 });
             }
             

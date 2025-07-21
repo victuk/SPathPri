@@ -54,6 +54,22 @@ const classPositionAndRemarksSchema = new Schema(
       enum: ["promoted", "promoted-on-trial", "pass", "fail"],
       required: true,
     },
+    totalStudentPresence: {
+      type: Number,
+      default: 0
+    },
+    totalStudentAbsence: {
+      type: Number,
+      default: 0
+    },
+    totalClassesHeld: {
+      type: Number,
+      default: 0
+    },
+    openingDate: {
+      type: Date,
+      default: null
+    },
 
     // Affective assessment
 
@@ -143,11 +159,8 @@ const classPositionAndRemarksSchema = new Schema(
       default: 5,
     },
 
-    schoolId: {
-      type: Types.ObjectId,
-      ref: "schoolprofile",
-      required: true,
-    },
+    // Nursery class
+
     handWriting: {
       test: {
         type: String,
@@ -201,7 +214,18 @@ const classPositionAndRemarksSchema = new Schema(
         type: String,
         default: "A"
       },
-    }
+    },
+
+    schoolId: {
+      type: Types.ObjectId,
+      ref: "schoolprofile",
+      required: true,
+    },
+
+    resumptionDate: {
+        type: Date,
+        default: null
+    },
   },
   { timestamps: true }
 );

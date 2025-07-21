@@ -126,16 +126,16 @@ export const createFeedback = async (
 
         let user: any;
 
-        if(!user) {
-            res.status(404).send({
-                errorMessage: "No user found. It seems you're not logged in."
-            });
-        }
-
         if(req.userDetails?.role == "student") {
             user = await studentsCollection.findById(req.userDetails?.userId);
         } else {
             user = await staffsCollection.findById(req.userDetails?.userId);
+        }
+
+        if(!user) {
+            res.status(404).send({
+                errorMessage: "No user found. It seems you're not logged in."
+            });
         }
 
         await feedbackCollection.create({
@@ -243,7 +243,6 @@ export const reopenFeedbackTicket = async (
         next(error);
     }
 }
-
 
 export const anonymousFeedback = async (req: CustomRequest,
     res: Response,

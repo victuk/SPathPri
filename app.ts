@@ -11,11 +11,12 @@ import attendance from "./routes/v1/notecategory";
 import student from "./routes/v1/student";
 import note from "./routes/v1/note";
 import bodyParser from "body-parser";
+import cookieParser from "cookie-parser";
 import cors from "cors";
 import logger from "morgan";
 import v1Routes from "./routes/v1Routes";
 import v2Routes from "./routes/v2Routes";
-
+import useragent from "express-useragent";
 var app: express.Application = express();
 
 const port = process.env.PORT || 4000;
@@ -33,8 +34,8 @@ mongoose.connect(`${process.env.MONGO}`)
 // view engine setup
 // app.set('views', path.join(__dirname, 'views'));
 // app.set('view engine', 'jade');
-
-const allowedOrigins = ["http://localhost:5173", "http://localhost:5174", "https://primarysch.solvpath-eportal.com"];
+const allowedOrigins = ["http://localhost:5173", "http://localhost:5174", "https://secondarysch.solvpath-eportal.com"];
+// const allowedOrigins = ["*"];
 
 app.use(logger('dev'));
 app.use(cors({
@@ -58,8 +59,9 @@ app.use(express.urlencoded({ extended: false }));
 //     extended: true,
 //   })
 // );
-// app.use(cookieParser());
+// app.use(cookieParser("a-secret"));
 app.use(express.static(path.join(__dirname, 'public')));
+app.use(useragent.express());
 
 app.use("/v1", v1Routes);
 app.use("/v2", v2Routes);
@@ -75,7 +77,6 @@ app.get("/", (_req, res) => {
 // app.use("/v1/attendance", attendance);
 // app.use("/v1/student", student);
 // app.use("/v1/assessment", assessment);
-
 
 // catch 404 and forward to error handler
 app.use(function(req, res, next) {
@@ -100,3 +101,4 @@ app.listen(port, () => {
   console.log(`TypeScript with Express http://localhost:${port}/`);
 });
 
+export default app;

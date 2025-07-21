@@ -1,6 +1,6 @@
 import { Response, NextFunction } from "express";
 import { CustomRequest } from "../middleware/authenticatedUsersOnly";
-import { StudentsScratchCardCollection } from "../models/studentsScratchCard";
+import { StudentsScratchCardCollection, StudentsScratchCardCollectionType } from "../models/studentsScratchCard";
 import { v4 } from "uuid";
 import { studentsCollection, studentsCollectionType } from "../models/students";
 import { sendEmail } from "../utils/emailUtilities";
@@ -485,6 +485,13 @@ export const pairAllStudents = async (
   try {
     const { schoolId } = req.body;
 
+    if(!schoolId) {
+      res.status(400).send({
+        errorMessage: "No school ID supplied"
+      });
+      return;
+    }
+
     const schoolDetails = await schoolProfileCollection.findById(schoolId);
     const students = await studentsCollection.find({ schoolId });
     const studentScratchCard = await StudentsScratchCardCollection.find({
@@ -535,3 +542,263 @@ export const pairAllStudents = async (
     next(error);
   }
 };
+
+export const cardSummaryV2 = async (req: CustomRequest, res: Response, next: NextFunction) => {
+  try {
+
+    const {year} = req.body;
+    
+    const totalPaired = await StudentsScratchCardCollection.countDocuments({schoolId: req.userDetails?.schoolId, studentId: {$ne: null}, year});
+
+    const totalUnpaired = await StudentsScratchCardCollection.countDocuments({schoolId: req.userDetails?.schoolId, studentId: null, year});
+
+    res.send({totalPaired, totalUnpaired});
+
+  } catch (error) {
+    next(error);
+  }
+}
+
+export const scratchCardV2 =  async (req: CustomRequest, res: Response, next: NextFunction) => {
+  try {
+    
+    const {classId} = req.body;
+
+    const students = await studentsCollection.find({classId, schoolId: req.userDetails?.schoolId}).populate("classId");
+
+    const studentIds = students.map(s => (s._id).toString());
+
+    const scratchCards = await StudentsScratchCardCollection.find({studentId: studentIds, schoolId: req.userDetails?.schoolId});
+
+    res.send({students, scratchCards});
+
+  } catch (error) {
+    next(error);
+  }
+}
+
+export const createSchoolScratchCardsV2 = async (req: CustomRequest, res: Response, next: NextFunction) => {
+  try {
+
+    const {scratchCardQuantity, term, year} = req.body;
+
+    if(!term || !year || !scratchCardQuantity || !req.userDetails?.schoolId) {
+      res.status(422).send({
+        message: "Kindly supply a term, year and scratch card quantity."
+      });
+      return;
+    }
+
+    const scratchCards: any[] = [];
+
+    for (let i = 0; i < scratchCardQuantity; i++) {
+      scratchCards.push({
+        scratchCardId: v4().split("-")[4],
+        term,
+        year,
+        schoolId: req.userDetails.schoolId!!
+      });
+    }
+
+    const newScratchCards = await StudentsScratchCardCollection.create(scratchCards);
+
+    res.status(201).send({
+      message: "Scratch cards created",
+      result: newScratchCards
+    });
+
+  } catch (error) {
+    next(error);
+  }
+}
+
+export const viewSchoolUnpairedScratchCardsV2 = async (req: CustomRequest, res: Response, next: NextFunction) => {
+  try {
+
+    const {term, year} = req.body;
+
+    if(!term || !year || !req.userDetails?.schoolId) {
+      res.status(422).send({
+        message: "Kindly supply a term, year and scratch card quantity."
+      });
+      return;
+    }
+
+    const scratchCards = await StudentsScratchCardCollection.find({
+      term, year, studentId: null, schoolId: req.userDetails.schoolId
+    });
+
+    res.status(201).send({
+      message: "Scratch cards created",
+      result: scratchCards
+    });
+
+  } catch (error) {
+    next(error);
+  }
+}
+
+export const assignScratchCardV2 = async (req: CustomRequest, res: Response, next: NextFunction) => {
+  try {
+    const {studentId} = req.body;
+
+    if(!req.userDetails?.schoolId) {
+      res.status(401).send({
+        message: "You don't have a student ID"
+      });
+      return;
+    }
+    console.log(studentId, req.userDetails.schoolId);
+    const studentDetails = await studentsCollection.findOne({_id: studentId, schoolId: req.userDetails.schoolId});
+
+    if(!studentDetails) {
+      res.status(404).send({
+        message: "Student does not exist"
+      });
+      return;
+    }
+
+    const alreadyHasScratchCard = await StudentsScratchCardCollection.findOne({studentId});
+
+    if(alreadyHasScratchCard) {
+      res.status(409).send({
+        message: "Student already has a scratch card. Unpair student before assigning a new scratch card."
+      });
+      return;
+    }
+
+    const schoolDetails = await schoolProfileCollection.findById(req.userDetails?.schoolId);
+
+    const createdScratchCard = await StudentsScratchCardCollection.create({
+      term: schoolDetails?.currentTerm,
+      year: schoolDetails?.currentYear,
+      studentId,
+      scratchCardId: v4().split("-")[4],
+      dateIssued: new Date(),
+      schoolId: req.userDetails?.schoolId
+    });
+
+    res.status(201).send({
+      message: "Student scratch card created successfully",
+      result: createdScratchCard
+    });
+
+  } catch (error) {
+    next(error);
+  }
+}
+
+export const unpairScratchCardV2 = async (req: CustomRequest, res: Response, next: NextFunction) => {
+  try {
+    const {studentId} = req.body;
+
+    console.log(studentId);
+
+    await StudentsScratchCardCollection.findOneAndDelete({
+      studentId
+    });
+
+    res.send({
+      message: "Scratch card unpaired and deleted successfully"
+    });
+  } catch (error) {
+    next(error);
+  }
+}
+
+export const resetScratchCardAttempt = async (req: CustomRequest, res: Response, next: NextFunction) => {
+  try {
+    
+    const {scratchCardId} = req.body;
+
+    const updatedScratchCard = await StudentsScratchCardCollection.findByIdAndUpdate(scratchCardId, {
+      loginChancesLeft: 4
+    }, {new: true});
+
+    res.send({
+      message: "Scratch card login attempts left updated successfully",
+      result: updatedScratchCard
+    });
+
+  } catch (error) {
+    next(error);
+  }
+}
+
+export const searchScratchCardV2 = async (req: CustomRequest, res: Response, next: NextFunction) => {
+  try {
+    
+    const {searchValue} = req.body;
+
+    const students = await studentsCollection.find({
+      $or: [
+        {firstName: {$in: searchValue.split(" ")}},
+        {otherNames: {$in: searchValue.split(" ")}},
+        {surName: {$in: searchValue.split(" ")}},
+        {studentUid: searchValue}
+      ],
+      schoolId: req.userDetails?.schoolId
+    });
+
+    if(students.length == 0) {
+      res.status(404).send({
+        message: "Student not found"
+      });
+      return;
+    }
+
+    const studentIds = students.map(s => s.id);
+
+    const scratchCards = await StudentsScratchCardCollection.find({
+      studentId: {$in: studentIds},
+      schoolId: req.userDetails?.schoolId
+    });
+
+    res.send({students, scratchCards});
+
+  } catch (error) {
+    next(error);
+  }
+}
+
+export const deleteBulkScratchCardsV2 = async (req: CustomRequest, res: Response, next: NextFunction) => {
+  try {
+    
+    const {term, year, deletePaired, deleteUnpaired} = req.body;
+
+    let pairedDeleteCount = 0;
+
+    let unpairedDeleteCount = 0;
+
+    if(deletePaired == false && deleteUnpaired == false) {
+      res.status(400).send({
+        message: "Kindly choose one of the checkboxes."
+      });
+      return;
+    }
+
+    if(deletePaired == true) {
+      let value = await StudentsScratchCardCollection.deleteMany({
+        studentId: {$ne: null},
+        term, year, schoolId: req.userDetails?.schoolId
+      });
+      pairedDeleteCount = value.deletedCount;
+    }
+
+    if(deleteUnpaired == true) {
+      let value = await StudentsScratchCardCollection.deleteMany({
+        studentId: null,
+        term, year, schoolId: req.userDetails?.schoolId
+      });
+      unpairedDeleteCount = value.deletedCount;
+    }
+
+    res.send({
+      message: `Scratch card for ${term.replace(/-/g, " ").toLocaleUpperCase()} ${term} session has been deleted successfully`,
+      pairedDeleteCount, unpairedDeleteCount
+    });
+
+  } catch (error) {
+    next(error);
+  }
+}

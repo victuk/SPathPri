@@ -9,6 +9,7 @@ import { announcementCollection } from "../models/announcementModel";
 import { schoolClassCollection } from "../models/classModel";
 import { AttendanceCollection } from "../models/studentsAttendance";
 import { Types } from "mongoose";
+import { redisClient } from "../utils/redisClientUtil";
 
 export const dashboardController = async (
   req: CustomRequest,

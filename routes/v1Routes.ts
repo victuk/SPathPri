@@ -40,13 +40,16 @@ import {
   updateAssignment,
 } from "../controllers/assignmentController";
 import {
+  adminsFormerStaffList,
+  adminsFormerStudentList,
   approveOrDeclineResultUpdate,
   changeStudentsClass,
   changeSuperAdminSchool,
+  clearOpeningDate,
   createStaff,
   createStudent,
   CSVStaffByRole,
-  deleteStudent,
+  // deleteStudent,
   deleteStudentAssessment,
   getAllSchoolStudents,
   getApprovalList,
@@ -65,10 +68,14 @@ import {
   promoteStudents,
   removeStaffFromSchool,
   removeStudentFromSchool,
+  restoreStaff,
+  restoreStudent,
   resultUpdateRequest,
   searchStaffByRole,
+  updateOpeningDate,
   updateStaff,
   updateStudent,
+  updateStudentAttendance,
   updateStudentResult,
   updateTeacherAssessment,
 } from "../controllers/userManagementController";
@@ -161,7 +168,7 @@ import {
   resetAttendance,
   updateAttendance,
 } from "../controllers/attendanceController";
-import { generatePDF, generateResultV2 } from "../controllers/generatePDFController";
+import { generatePDF, generateResultV2, studentResultList } from "../controllers/generatePDFController";
 import { sendTextMessages } from "../utils/sendTextUtil";
 import roleBasedAccess from "../middleware/roleBasedAccess";
 import { sendEmail } from "../utils/emailUtilities";
@@ -180,8 +187,49 @@ import { staffsCollection } from "../models/staffs";
 import { Types } from "mongoose";
 import { anonymousFeedback, changeFeedbackTicketStatus, createFeedback, getOthersFeedbacks, getSubmittedFeedbacks, reopenFeedbackTicket, viewFeedback } from "../controllers/feedbackController";
 import { changePasswordForStaffs, updatePasswordChangeForStaffs } from "../controllers/settingsController";
+import { classPositionAndRemarksCollection } from "../models/classPositionAndRemarksModel";
+import { generateTranscript } from "../controllers/transcriptController";
 
 const v1Routes = Router();
+
+v1Routes.get("/normalize-closing-and-attendnce", async (req, res, next) => {
+  try {
+    await schoolProfileCollection.updateMany({}, {
+      openingDate: null
+    });
+    await classPositionAndRemarksCollection.updateMany({}, {
+      openingDate: null,
+      totalStudentPresence: 0,
+      totalStudentAbsence: 0,
+      totalClassesHeld: 0
+    });
+    res.send("Done");
+  } catch (error) {
+    next(error);
+  }
+});
+
+v1Routes.get("/normalize-grading-system", async (req, res, next) => {
+  try {
+    await schoolProfileCollection.updateMany({}, {
+      gradingSystem: "grading-system-1", accountStatus: "active"
+    });
+    res.send("Done");
+  } catch (error) {
+    next(error);
+  }
+});
+
+v1Routes.get("/normalize-login-attempt", async (req, res, next) => {
+  try {
+    await StudentsScratchCardCollection.updateMany({}, {
+      loginChancesLeft: 4
+    });
+    res.send("Done");
+  } catch (error) {
+    next(error);
+  }
+});
 
 v1Routes.get("/normalize-student-record", async (req, res, next) => {
   try {
@@ -381,6 +429,11 @@ v1Routes.get("/assessment", createAssessment);
 v1Routes.put("/assessment/:id", updateAssessment);
 v1Routes.delete("/assessment/:id", deleteAssessment);
 
+v1Routes.get("/former/students/:page/:limit", adminsFormerStudentList);
+v1Routes.get("/former/staffs/:page/:limit", adminsFormerStaffList);
+v1Routes.put("/former/restore/student", restoreStudent);
+v1Routes.put("/former/restore/staff", restoreStaff);
+
 // v1Routes.get("/teacher-assessment");
 
 // Term Result
@@ -418,7 +471,12 @@ v1Routes.post("/student-by-uid", getStudentByUID);
 // v1Routes.get("/student", createStudent);
 v1Routes.put("/student/:id", updateStudent);
 v1Routes.delete("/remove-from-school/:id", removeStudentFromSchool);
-v1Routes.delete("/student/:id", deleteStudent);
+// v1Routes.delete("/student/:id", deleteStudent);
+v1Routes.delete("/student/:id", (_req, res) => {
+  res.status(401).send({
+    message: "This operation is potentially destructive and is thereby prevented. Kindly remove the student from school instead, thank you."
+  });
+});
 v1Routes.get("/all-school-students", getAllSchoolStudents);
 
 // Student result
@@ -530,7 +588,6 @@ v1Routes.post("/bulk-pair", pairAllStudents);
 v1Routes.put("/pair-scratch-card", pairScratchCard);
 v1Routes.put("/unpair-scratch-card", unpairScratchCard);
 v1Routes.delete("/scratch-card/:id", deleteScratchCard);
-
 // Profile route
 v1Routes.get("/profile/student", getStudentProfile);
 v1Routes.get("/profile/staff", getStaffProfile);
@@ -555,14 +612,18 @@ v1Routes.get("/curriculum-template", getCurriculumTemplate);
 v1Routes.get("/schools", getSchools);
 v1Routes.get("/school/my-school-details", getMySchoolDetails);
 v1Routes.get("/school/:id", getSchool);
-v1Routes.post("/school", createSchool);
-v1Routes.put("/school/:id", updateSchool);
+v1Routes.post("/school", roleBasedAccess(["super-admin"]), createSchool);
+v1Routes.put("/school/:id", roleBasedAccess(["super-admin"]), updateSchool);
 // v1Routes.put("/school/:id", deleteSchoo);
 
 // Attendance routes
 v1Routes.post("/class-attendance", getClassAttendance);
 v1Routes.put("/class-attendance", updateAttendance);
 v1Routes.put("/reset-class-attendance", resetAttendance);
+
+v1Routes.put("/update-result-attendance", roleBasedAccess(["admin", "super-admin", "teacher"]), updateStudentAttendance);
+v1Routes.put("/update-opening-date", roleBasedAccess(["admin", "super-admin"]), updateOpeningDate);
+v1Routes.put("/clear-opening-date", roleBasedAccess(["admin", "super-admin"]), clearOpeningDate);
 
 // Feedback routes
 v1Routes.get("/my-submitted-feedbacks/:page/:limit", getSubmittedFeedbacks);
@@ -578,6 +639,18 @@ v1Routes.post("/affective-assessment/affective-assessment/:page/:limit", affecti
 v1Routes.post("/affective-assessment/create", createAffectiveAssessment);
 // v1Routes.put("/affective-assessment/:id", updateAffectiveAssessment);
 v1Routes.delete("/affective-assessment/:id", deleteAffectiveAssessment);
+
+v1Routes.get("/student-result-list", studentResultList);
+
+v1Routes.post("/generate-transcript", async (req: CustomRequest, res: Response, next: NextFunction) => {
+  try {
+    const {studentId} = req.body;
+    const transcriptUrl = await generateTranscript(studentId, req.userDetails?.schoolId!!);
+    res.send({transcriptUrl});
+  } catch (error) {
+    next(error);
+  }
+});
 
 v1Routes.post("/generate-pdf", generatePDF);
 

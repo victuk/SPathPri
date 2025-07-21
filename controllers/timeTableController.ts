@@ -85,7 +85,7 @@ export const createTimeTable = async (req: CustomRequest, res: Response, next: N
         const {
             title,
             fileLink
-        } = req.body;
+        }: {title: string, fileLink: string} = req.body;
 
         const {error} = Joi.object({
             title: Joi.string().required().messages({
@@ -106,7 +106,7 @@ export const createTimeTable = async (req: CustomRequest, res: Response, next: N
 
         const newTimetable = await timeTableCollection.create({
             uploadedById: req.userDetails!!.userId,
-            title,
+            title: title.trim(),
             fileLink
         });
 

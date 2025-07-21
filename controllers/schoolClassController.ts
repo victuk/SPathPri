@@ -78,7 +78,7 @@ export const createSchoolClass = async (
     const { schoolClass }: { schoolClass: string } = req.body;
 
     const alreadyExist = await schoolClassCollection.findOne({
-      schoolClass,
+      schoolClass: schoolClass.trim(),
       schoolId: req.userDetails?.schoolId,
     });
 
@@ -89,10 +89,10 @@ export const createSchoolClass = async (
       return;
     }
 
-    const slug = schoolClass.toLocaleLowerCase().split(" ").join("-");
+    const slug = schoolClass.toLocaleLowerCase().trim().split(" ").join("-");
 
     const newSchoolClass = await schoolClassCollection.create({
-      schoolClass,
+      schoolClass: schoolClass.trim(),
       slug,
       schoolId: req.userDetails?.schoolId,
     });
@@ -113,15 +113,15 @@ export const updateSchoolClass = async (
   try {
     const { id } = req.params;
 
-    const { schoolClass } = req.body;
+    const { schoolClass }: {schoolClass: string} = req.body;
 
-    const slug = schoolClass.toLocaleLowerCase().split(" ").join("-");
+    const slug = schoolClass.toLocaleLowerCase().trim().split(" ").join("-");
 
     const updatedSchoolClass = await schoolClassCollection.findByIdAndUpdate(
       id,
       {
-        schoolClass,
-        slug,
+        schoolClass: schoolClass.trim(),
+        slug: slug.trim(),
       },
       { new: true }
     );
@@ -253,9 +253,12 @@ export const generateResult = async (
         studentSubjectAverage = studentSubjectTotal / studentsRecord.length;
       }
 
+      console.log("studentSubjectTotal / studentsRecord.length", studentSubjectTotal, studentsRecord.length,  studentSubjectAverage);
+
       studentsAverage.push({
         studentId: studentsInClass[i].id,
         studentClass: classId,
+        openingDate: schoolDetails?.openingDate,
         term: schoolDetails?.currentTerm,
         year: schoolDetails?.currentYear,
         schoolId: schoolDetails?._id,
@@ -278,13 +281,12 @@ export const generateResult = async (
       (a, b) => b.studentSubjectAverage - a.studentSubjectAverage
     );
 
-    // let position = 0
+    // let position = 1;
 
     for (let i = 0; i < studentsAverage.length; i++) {
       // let studentPosition: number;
-      // if(i > 0 && i < studentsAverage.length) {
-      //   if(studentsAverage[i].studentSubjectAverage == studentsAverage[i + 1].studentSubjectAverage ||
-      //     studentsAverage[i].studentSubjectAverage == studentsAverage[i - 1].studentSubjectAverage
+      // if(i > 0) {
+      //   if(studentsAverage[i].studentSubjectAverage == studentsAverage[i - 1].studentSubjectAverage
       //   ) {
       //     studentPosition = position;
       //   } else {
@@ -292,9 +294,10 @@ export const generateResult = async (
       //     studentPosition = position;
       //   }
       // } else {
-      //   position + 1;
-      //   studentPosition = position;
+
+      
       // }
+      // position + 1;
       let studentPosition = i + 1;
       studentsAverage[i].position = getOrdinalSuffix(studentPosition);
     }
@@ -358,7 +361,7 @@ export const generateSubjectResult = async (term: string, year: string, classId:
         return studentB - studentA;
       }).forEach(async (student, index) => {
         await resultCollection.findByIdAndUpdate(student._id, {
-          subjectPosition: index + 1
+          subjectPosition: getOrdinalSuffix(index + 1)
         });
       });
     }
@@ -492,7 +495,7 @@ export const getResultRemark = async (
         studentClass: classId,
         term: schoolDetails?.currentTerm,
         year: schoolDetails?.currentYear
-      }).populate("studentId", selectValue).populate("studentClass");
+      }).populate("studentId", selectValue).populate("studentClass").sort("studentId.firstName");
     } else if (req.userDetails?.role == "teacher") {
       const teacherProfile = await staffsCollection.findById(
         req.userDetails.userId

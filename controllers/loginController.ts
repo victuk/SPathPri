@@ -1,5 +1,5 @@
 import { usersDB } from "../models/usersModel";
-import jwt from "jsonwebtoken";
+import jwt, { decode, JwtPayload } from "jsonwebtoken";
 import bcrypt from "bcrypt";
 import "dotenv/config";
 import { CustomRequest } from "../middleware/authenticatedUsersOnly";
@@ -7,12 +7,11 @@ import { NextFunction, Response } from "express";
 // import { schoolAdminCollection, schoolAdminCollectionType } from "../models/superAdmins";
 import { staffsCollection } from "../models/staffs";
 import { studentsCollection, studentsCollectionType } from "../models/students";
-import { comparePassword, signJWT } from "../utils/authUtilities";
+import { comparePassword, generateRefreshToken, signJWT, verifyJWT, verifyRefreshToken } from "../utils/authUtilities";
 import { StudentsScratchCardCollection } from "../models/studentsScratchCard";
 import Joi from "joi";
-import { v4 } from "uuid";
 import { userSessionCollection } from "../models/userSessionModel";
-import { verifyRefreshToken } from "../utils/authUtilities"
+import { v4 } from "uuid";
 import { redisClient } from "../utils/redisClientUtil";
 
 const jwtKey = process.env.AUTH_KEY!!;
@@ -43,12 +42,12 @@ async function studentLogin(
 
     if (!studentScratchCard) {
       res.status(404).send({
-        message: "Invalid scratch card",
+        message: "Scratch card not found",
       });
       return;
     }
 
-    if(studentScratchCard.remainingUsageNumber == 0) {
+    if(studentScratchCard.loginChancesLeft == 0) {
       res.status(401).send({
         message: "You have reached your scratch card limit for the term. Kindly contact the admin.",
       });
@@ -83,9 +82,11 @@ async function studentLogin(
       return;
     }
 
+    const deviceId = v4();
+
     await StudentsScratchCardCollection.findOneAndUpdate({
       scratchCardId,
-    }, {$inc: {remainingUsageNumber: -1}});
+    }, {$inc: {loginChancesLeft: -1}});
 
     const jwt = signJWT({
       userId: studentDetails.id,
@@ -93,10 +94,40 @@ async function studentLogin(
       email: studentDetails.email,
       role: "student",
       accountStatus: studentDetails.accountStatus,
-      schoolId: studentDetails.schoolId._id ? (studentDetails.schoolId._id).toString() : null
+      schoolId: studentDetails.schoolId._id ? (studentDetails.schoolId._id).toString() : null,
+      deviceId
     });
 
-    res.send({
+    // const vTo: any = decode(jwt);
+
+    // console.log("vTo", vTo);
+
+    // await redisClient.set(`${studentDetails.id}----${deviceId}`, JSON.stringify({
+    //   jwt, expiryDate: vTo!!.exp
+    // }));
+
+    // const userAgent = req.useragent;
+
+
+    // const userSession = await userSessionCollection.findOne({userId: studentDetails.id, deviceId});
+
+    // if(userSession) {
+    //   await userSessionCollection.findOne({userId: studentDetails.id, deviceId}, {
+    //     deviceId,
+    //     lastLogin: new Date()
+    //   });
+    // } else {
+    //   await userSessionCollection.create({
+    //     userId: studentDetails.id,
+    //     role: studentDetails.role,
+    //     deviceId,
+    //     platform: userAgent?.platform,
+    //     browser: userAgent?.browser,
+    //     lastLogin: new Date()
+    //   });
+    // }
+    
+  res.send({
       message: "Login Successful",
       studentDetails: {
         fullName: `${studentDetails.firstName} ${studentDetails.surname}`,
@@ -170,7 +201,16 @@ async function staffLogin(
       return;
     }
 
+    if(staffDetails.role != "super-admin" && !staffDetails.schoolId?._id) {
+      res.status(400).send({
+        message: "Not assigned to a school. Contact admin",
+      });
+      return;
+    }
+
     console.log(staffDetails.schoolId?._id);
+
+    const deviceId = v4();
 
     const jwt = signJWT({
       userId: staffDetails.id,
@@ -178,10 +218,41 @@ async function staffLogin(
       email: staffDetails.email,
       role: staffDetails.role,
       accountStatus: staffDetails.accountStatus,
-      schoolId: staffDetails.role != "super-admin" ? (staffDetails.schoolId._id).toString() : null
+      schoolId: staffDetails.role != "super-admin" ? (staffDetails.schoolId._id).toString() : null,
+      deviceId
     });
 
-    res.send({
+    // const vTo: any = decode(jwt);
+
+    // console.log("vTo", vTo);
+
+    // await redisClient.set(`${vTo.userId}----${vTo.deviceId}`, JSON.stringify({
+    //   jwt, expiryDate: vTo!!.exp
+    // }));
+
+    // console.log("vvv", await redisClient.get(`${staffDetails.id}----${deviceId}`));
+
+    // const userSession = await userSessionCollection.findOne({userId: staffDetails.id, deviceId});
+
+    // const userAgent = req.useragent;
+    // console.log("jwt", jwt);
+    // if(userSession) {
+    //   await userSessionCollection.findOne({userId: staffDetails.id, deviceId}, {
+    //     deviceId,
+    //     lastLogin: new Date()
+    //   });
+    // } else {
+    //   await userSessionCollection.create({
+    //     userId: staffDetails.id,
+    //     role: staffDetails.role,
+    //     deviceId,
+    //     platform: userAgent?.platform,
+    //     browser: userAgent?.browser,
+    //     lastLogin: new Date()
+    //   });
+    // }
+    
+  res.send({
       message: "Login Successful",
       staffDetails: {
         fullName: `${staffDetails.firstName} ${staffDetails.surname}`,
@@ -197,6 +268,77 @@ async function staffLogin(
     next(error);
   }
 }
+
+const getStaffDetailsBeforeLogin = async (
+  req: CustomRequest,
+  res: Response,
+  next: NextFunction
+) => {
+  try {
+    const { email } = req.params;
+
+    const {error} = Joi.string().email({tlds: {allow: false}}).required().validate(email);
+
+    if(error) {
+      res.status(400).send({
+        errorMessage: "Invalid email address"
+      });
+      return;
+    }
+
+    const staffDetails = await staffsCollection.findOne(
+      { email },
+      "profilePic firstName otherNames surname role"
+    );
+
+    if(!staffDetails) {
+      res.status(404).send({
+        message: "Staff not found"
+      });
+      return;
+    }
+
+    res.send({
+      result: staffDetails,
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+const getStudentDetailsBeforeLogin = async (
+  req: CustomRequest,
+  res: Response,
+  next: NextFunction
+) => {
+  try {
+    const { scratchCardId } = req.params;
+
+    if(!scratchCardId) {
+      res.status(400).send({
+        errorMessage: "Scratch card is required"
+      });
+      return;
+    }
+
+    const studentDetails = await StudentsScratchCardCollection.findOne({
+      scratchCardId,
+    }).populate("studentId", "profilePic firstName otherNames surname");
+
+    if(!studentDetails) {
+      res.status(404).send({
+        message: "Student not found"
+      });
+      return;
+    }
+
+    res.send({
+      result: studentDetails?.studentId,
+    });
+  } catch (error) {
+    next(error);
+  }
+};
 
 const logOut = async (
   req: CustomRequest,
@@ -305,66 +447,11 @@ const refreshCurrentToken = async (
   }
 }
 
-const getStaffDetailsBeforeLogin = async (
-  req: CustomRequest,
-  res: Response,
-  next: NextFunction
-) => {
-  try {
-    const { email } = req.params;
-
-    const staffDetails = await staffsCollection.findOne(
-      { email },
-      "profilePic firstName otherNames surname role"
-    );
-
-    if(!staffDetails) {
-      res.status(404).send({
-        message: "Staff not found"
-      });
-      return;
-    }
-
-    res.send({
-      result: staffDetails,
-    });
-  } catch (error) {
-    next(error);
-  }
-};
-
-const getStudentDetailsBeforeLogin = async (
-  req: CustomRequest,
-  res: Response,
-  next: NextFunction
-) => {
-  try {
-    const { scratchCardId } = req.params;
-
-    const studentDetails = await StudentsScratchCardCollection.findOne({
-      scratchCardId,
-    }).populate("studentId", "profilePic firstName otherNames surname");
-
-    if(!studentDetails) {
-      res.status(404).send({
-        message: "Student not found"
-      });
-      return;
-    }
-
-    res.send({
-      result: studentDetails?.studentId,
-    });
-  } catch (error) {
-    next(error);
-  }
-};
-
 export {
   studentLogin,
   staffLogin,
-  logOut,
-  refreshCurrentToken,
   getStaffDetailsBeforeLogin,
   getStudentDetailsBeforeLogin,
+  refreshCurrentToken,
+  logOut
 };

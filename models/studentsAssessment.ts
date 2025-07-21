@@ -32,15 +32,15 @@ const AssessmentSchema = new Schema({
     },
     testOne: {
         type: Number,
-        required: true
+        default: 0
     },
     testTwo: {
         type: Number,
-        required: true
+        default: 0
     },
     testThree: {
         type: Number,
-        required: true
+        default: 0
     },
     exam: {
         type: Number,

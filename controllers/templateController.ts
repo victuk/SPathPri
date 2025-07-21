@@ -124,7 +124,7 @@ export const deleteSchoolTemplate = async (
 
         if((staffDetails!!.schoolId).toString() != (templateDetails!!.schoolId).toString()) {
             res.status(401).send({
-                message: "You are not allowed to take this action"
+              message: "You are not allowed to take this action"
             });
             return;
         }

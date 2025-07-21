@@ -8,6 +8,10 @@ import { resultCollection } from '../models/resultModel';
 import { affectiveAssessmentCollection } from '../models/affectiveAssessment';
 import Joi from 'joi';
 import { getSchoolId } from '../utils/schoolIdUtil';
+import { adminAffectiveAssessmentCollection } from '../models/adminAffectiveAssessment';
+import { Types } from 'mongoose';
+import { studentTeacherAffectiveAssessmentCollection } from '../models/studentTeacherAffectiveAssessment';
+import { classTeacherAffectiveAssessmentCollection } from '../models/classTeacherAffectiveAssessment';
 
 export const assessments = async (req: CustomRequest, res: Response, next: NextFunction) => {
     try {
@@ -511,6 +515,166 @@ export const deleteAffectiveAssessment = async (req: CustomRequest, res: Respons
         res.send({
             message: "Affective assessment deleted successfully",
             affectiveAssessmentDeleted
+        });
+
+    } catch (error) {
+        next(error);
+    }
+}
+
+// ==================================== New
+
+export const getAdminAffectiveAssessmentListV2 = async (req: CustomRequest, res: Response, next: NextFunction) => {
+    try {
+        const affectiveAssessment = await adminAffectiveAssessmentCollection.find({schoolId: req.userDetails?.schoolId});
+        res.send({
+            result: affectiveAssessment
+        });
+    } catch (error) {
+        next(error);
+    }
+}
+
+export const addAdminAffectiveAssessmentListV2 = async (req: CustomRequest, res: Response, next: NextFunction) => {
+    try {
+        
+        const {
+            title,
+            type
+        }: {title: String, type: String} = req.body;
+
+        const typeSlug = type.toLocaleLowerCase().replace(/ /g, "_");
+
+        const newRecord = await adminAffectiveAssessmentCollection.create({
+            title, type, typeSlug, schoolId: req.userDetails?.schoolId
+        });
+
+        res.status(201).send({
+            result: newRecord
+        });
+
+    } catch (error) {
+        next(error);
+    }
+}
+
+export const updateAdminAffectiveAssessmentListV2 = async (req: CustomRequest, res: Response, next: NextFunction) => {
+    try {
+        
+        const {id} = req.params;
+
+        const {
+            title,
+            type
+        }: {title: String, type: String} = req.body;
+
+        const typeSlug = type.toLocaleLowerCase().replace(/ /g, "_");
+
+        const updatedRecord = await adminAffectiveAssessmentCollection.findByIdAndUpdate(id, {
+            title, type, typeSlug, schoolId: req.userDetails?.schoolId
+        });
+
+        res.send({
+            record: updatedRecord
+        });
+
+    } catch (error) {
+        next(error);
+    }
+}
+
+export const deleteAdminAffectiveAssessmentListV2 = async (req: CustomRequest, res: Response, next: NextFunction) => {
+    try {
+        const {id} = req.params as {id: string};
+
+        await adminAffectiveAssessmentCollection.findByIdAndDelete(id);
+
+        res.send({
+            message: "Deleted successfully",
+            deletedId: id
+        });
+
+    } catch (error) {
+        next(error);
+    }
+}
+
+export const getTeacherAffectiveAssessmentV2 = async (req: CustomRequest, res: Response, next: NextFunction) => {
+    try {
+        const {classTeacherClass, term, year} = req.body;
+
+        const students = await studentsCollection.find({classId: classTeacherClass}).populate("classId");
+
+        const affectiveAssessmentFields = await adminAffectiveAssessmentCollection.find({schoolId: req.userDetails?.schoolId});
+
+        const teacherAffectiveAssessment = await classTeacherAffectiveAssessmentCollection.find({studentClass: classTeacherClass, term, year});
+
+        res.send({
+            message: "List sent successfully",
+            students,
+            affectiveAssessmentFields,
+            teacherAffectiveAssessment
+        });
+
+    } catch (error) {
+        next(error);
+    }
+}
+
+export const updateAffectiveAssessmentV2 = async (req: CustomRequest, res: Response, next: NextFunction) => {
+    try {
+        
+        const {
+            studentId, studentClass, term, year, affectiveAssessments
+        } = req.body;
+
+        const exists = await classTeacherAffectiveAssessmentCollection.findOne({
+            studentId, studentClass, term, year, schoolId: req.userDetails?.schoolId
+        });
+
+        let val: any = null;
+
+        if(exists) {
+            val = await classTeacherAffectiveAssessmentCollection.findByIdAndUpdate(exists._id, {
+                classTeacherId: req.userDetails?.userId,
+                classTeacherAffectiveAssessments: affectiveAssessments
+            }, {new: true});
+        } else {
+            val = await classTeacherAffectiveAssessmentCollection.create({
+                studentId, studentClass, classTeacherId: req.userDetails?.userId, schoolId: req.userDetails?.schoolId, term,
+                year, classTeacherAffectiveAssessments: affectiveAssessments
+            });
+        }
+
+        res.send({
+            message: "AffectiveAssessment updated",
+            result: val
+        });
+
+    } catch (error) {
+        next(error);
+    }
+}
+
+export const deleteTeacherAffectivAssessmentV2 = async (req: CustomRequest, res: Response, next: NextFunction) => {
+    try {
+
+        const {studentId, classId, term, year} = req.body;
+
+        const affectiveAssessment = await classTeacherAffectiveAssessmentCollection.findOne({studentId, studentClass: classId, term, year});
+
+        if(!affectiveAssessment) {
+            res.status(404).send({
+                message: "Affective assessment not found"
+            });
+            return;
+        }
+
+        const deletedAffectiveAssessment = await classTeacherAffectiveAssessmentCollection.findOneAndDelete({studentId, studentClass: classId, term, year});
+
+        res.send({
+            message: "Affective assessment deleted",
+            deletedAffectiveAssessment
         });
 
     } catch (error) {
