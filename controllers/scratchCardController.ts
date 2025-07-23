@@ -546,11 +546,18 @@ export const pairAllStudents = async (
 export const cardSummaryV2 = async (req: CustomRequest, res: Response, next: NextFunction) => {
   try {
 
-    const {year} = req.body;
-    
-    const totalPaired = await StudentsScratchCardCollection.countDocuments({schoolId: req.userDetails?.schoolId, studentId: {$ne: null}, year});
+    const {term, year} = req.body;
 
-    const totalUnpaired = await StudentsScratchCardCollection.countDocuments({schoolId: req.userDetails?.schoolId, studentId: null, year});
+    if(!year || !term) {
+      res.status(400).send({
+        message: "Kindly choose a term and a year",
+      });
+      return;
+    }
+    
+    const totalPaired = await StudentsScratchCardCollection.countDocuments({schoolId: req.userDetails?.schoolId, studentId: {$ne: null}, term, year});
+
+    const totalUnpaired = await StudentsScratchCardCollection.countDocuments({schoolId: req.userDetails?.schoolId, studentId: null, term, year});
 
     res.send({totalPaired, totalUnpaired});
 
@@ -617,9 +624,16 @@ export const viewSchoolUnpairedScratchCardsV2 = async (req: CustomRequest, res: 
 
     const {term, year} = req.body;
 
-    if(!term || !year || !req.userDetails?.schoolId) {
+    if(!term || !year) {
       res.status(422).send({
-        message: "Kindly supply a term, year and scratch card quantity."
+        message: "Kindly supply a term and a year."
+      });
+      return;
+    }
+
+    if(!req.userDetails?.schoolId) {
+      res.status(422).send({
+        message: "You're not assigned to a school"
       });
       return;
     }
@@ -629,6 +643,39 @@ export const viewSchoolUnpairedScratchCardsV2 = async (req: CustomRequest, res: 
     });
 
     res.status(201).send({
+      message: "Scratch cards created",
+      result: scratchCards
+    });
+
+  } catch (error) {
+    next(error);
+  }
+}
+
+export const viewSchoolPairedScratchCardsV2 = async (req: CustomRequest, res: Response, next: NextFunction) => {
+  try {
+
+    const {term, year, classId} = req.body;
+
+    if(!term || !year || !req.userDetails?.schoolId) {
+      res.status(422).send({
+        message: "Kindly supply a class, a term, year and scratch card quantity."
+      });
+      return;
+    }
+
+    if(!req.userDetails?.schoolId) {
+      res.status(422).send({
+        message: "You're not assigned to a school"
+      });
+      return;
+    }
+
+    const scratchCards = await StudentsScratchCardCollection.find({
+      term, year, studentId: {$ne: null}, schoolId: req.userDetails.schoolId
+    }).populate("studentId").sort({"studentId.firstName": -1});
+
+    res.send({
       message: "Scratch cards created",
       result: scratchCards
     });
