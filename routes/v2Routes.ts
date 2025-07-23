@@ -8,7 +8,7 @@ import puppeteer from "puppeteer";
 import fs from "fs";;
 import { studentsCollection } from "../models/students";
 import { getSingleStudentResultByRecordIdV2, getSingleStudentResultV2 } from "../controllers/userManagementController";
-import { assignScratchCardV2, cardSummaryV2, createSchoolScratchCardsV2, deleteBulkScratchCardsV2, resetScratchCardAttempt, scratchCardV2, searchScratchCardV2, unpairScratchCardV2, viewSchoolUnpairedScratchCardsV2 } from "../controllers/scratchCardController";
+import { assignScratchCardV2, cardSummaryV2, createSchoolScratchCardsV2, deleteBulkScratchCardsV2, resetScratchCardAttempt, scratchCardV2, searchScratchCardV2, unpairScratchCardV2, viewSchoolPairedScratchCardsV2, viewSchoolUnpairedScratchCardsV2 } from "../controllers/scratchCardController";
 import { classPositionAndRemarksCollection } from "../models/classPositionAndRemarksModel";
 import { addAdminAffectiveAssessmentListV2, deleteAdminAffectiveAssessmentListV2, deleteTeacherAffectivAssessmentV2, getAdminAffectiveAssessmentListV2, getTeacherAffectiveAssessmentV2, updateAdminAffectiveAssessmentListV2, updateAffectiveAssessmentV2 } from "../controllers/assessmentController";
 
@@ -87,6 +87,7 @@ v2Routes.post("/school-scratch-cards/create", createSchoolScratchCardsV2);
 v2Routes.post("/school-scratch-cards/summary", cardSummaryV2);
 v2Routes.post("/school-scratch-cards/view", viewSchoolUnpairedScratchCardsV2);
 v2Routes.post("/school-scratch-cards/assign", assignScratchCardV2);
+v2Routes.post("/school-scratch-cards/view-paired", viewSchoolPairedScratchCardsV2);
 v2Routes.post("/school-scratch-cards/unpair", unpairScratchCardV2);
 v2Routes.post("/school-scratch-cards/reset", resetScratchCardAttempt);
 v2Routes.post("/school-scratch-cards/search", searchScratchCardV2);
