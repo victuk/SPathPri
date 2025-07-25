@@ -569,13 +569,15 @@ export const cardSummaryV2 = async (req: CustomRequest, res: Response, next: Nex
 export const scratchCardV2 =  async (req: CustomRequest, res: Response, next: NextFunction) => {
   try {
     
-    const {classId} = req.body;
+    const {classId, term, year} = req.body;
+
+    console.log(req.body);
 
     const students = await studentsCollection.find({classId, schoolId: req.userDetails?.schoolId}).populate("classId");
 
     const studentIds = students.map(s => (s._id).toString());
 
-    const scratchCards = await StudentsScratchCardCollection.find({studentId: studentIds, schoolId: req.userDetails?.schoolId});
+    const scratchCards = await StudentsScratchCardCollection.find({studentId: studentIds, term, year, schoolId: req.userDetails?.schoolId});
 
     res.send({students, scratchCards});
 
@@ -655,7 +657,7 @@ export const viewSchoolUnpairedScratchCardsV2 = async (req: CustomRequest, res: 
 export const viewSchoolPairedScratchCardsV2 = async (req: CustomRequest, res: Response, next: NextFunction) => {
   try {
 
-    const {term, year, classId} = req.body;
+    const {term, year} = req.body;
 
     if(!term || !year || !req.userDetails?.schoolId) {
       res.status(422).send({
@@ -741,7 +743,7 @@ export const unpairScratchCardV2 = async (req: CustomRequest, res: Response, nex
 
     console.log(studentId);
 
-    await StudentsScratchCardCollection.findOneAndDelete({
+    await StudentsScratchCardCollection.deleteMany({
       studentId
     });
 
@@ -812,6 +814,13 @@ export const deleteBulkScratchCardsV2 = async (req: CustomRequest, res: Response
   try {
     
     const {term, year, deletePaired, deleteUnpaired} = req.body;
+
+    if(!term || !year) {
+      res.status(422).send({
+        message: "Kindly choose a term and a year"
+      });
+      return;
+    }
 
     let pairedDeleteCount = 0;
 

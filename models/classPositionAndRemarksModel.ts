@@ -49,10 +49,14 @@ const classPositionAndRemarksSchema = new Schema(
       type: String,
       default: null,
     },
+    includeWeakSubjects: {
+      type: Boolean,
+      default: false
+    },
     verdict: {
       type: String,
-      enum: ["promoted", "promoted-on-trial", "pass", "fail"],
-      required: true,
+      enum: ["pass", "fail"],
+      default: null,
     },
     totalStudentPresence: {
       type: Number,

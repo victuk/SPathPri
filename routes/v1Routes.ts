@@ -189,6 +189,7 @@ import { anonymousFeedback, changeFeedbackTicketStatus, createFeedback, getOther
 import { changePasswordForStaffs, updatePasswordChangeForStaffs } from "../controllers/settingsController";
 import { classPositionAndRemarksCollection } from "../models/classPositionAndRemarksModel";
 import { generateTranscript } from "../controllers/transcriptController";
+import { addNewResultComment, deleteResultComment, updateResultComment, viewResultComments } from "../controllers/resultCommentController";
 
 const v1Routes = Router();
 
@@ -570,6 +571,12 @@ v1Routes.get("/lesson-note/:id", getLessonNoteById);
 v1Routes.post("/lesson-note", createLessonNote);
 v1Routes.put("/lesson-note/:id", updateLessonNote);
 v1Routes.delete("/lesson-note/:id", deleteLessonNote);
+
+// Result Comments
+v1Routes.get("/result-comments", viewResultComments);
+v1Routes.post("/result-comments/add", addNewResultComment);
+v1Routes.put("/result-comments/:id", updateResultComment);
+v1Routes.delete("/result-comments/:id", deleteResultComment);
 
 // School student track Track
 v1Routes.get("/tracks", getSchoolTracks);

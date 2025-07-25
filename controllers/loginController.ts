@@ -13,6 +13,7 @@ import Joi from "joi";
 import { userSessionCollection } from "../models/userSessionModel";
 import { v4 } from "uuid";
 import { redisClient } from "../utils/redisClientUtil";
+import { schoolProfileCollection } from "../models/schoolProfile";
 
 const jwtKey = process.env.AUTH_KEY!!;
 
@@ -43,6 +44,29 @@ async function studentLogin(
     if (!studentScratchCard) {
       res.status(404).send({
         message: "Scratch card not found",
+      });
+      return;
+    }
+
+    if(!studentScratchCard.studentId) {
+      res.status(404).send({
+        message: "This scratch card isn't assigned. to any student",
+      });
+      return;
+    }
+
+    if(!studentScratchCard.schoolId) {
+      res.status(404).send({
+        message: "This scratch card isn't assigned. to a school",
+      });
+      return;
+    }
+
+    const schoolDetails = await schoolProfileCollection.findById(studentScratchCard.schoolId);
+
+    if(schoolDetails?.currentTerm != studentScratchCard.term && schoolDetails?.currentYear != studentScratchCard.year) {
+      res.status(404).send({
+        message: `Scratch card has expired. Kindly ask your school for a new scratch card for the current term and year.`,
       });
       return;
     }

@@ -9,6 +9,7 @@ import { resultCollection, resultCollectionType } from "../models/resultModel";
 import { getOrdinalSuffix } from "../utils/ordinalSuffix";
 import { classPositionAndRemarksCollection } from "../models/classPositionAndRemarksModel";
 import { staffsCollection } from "../models/staffs";
+import { teacherAdminRemarksCollection } from "../models/teacherAdminRemarksModel";
 
 export const getSchoolClasses = async (
   req: CustomRequest,
@@ -204,6 +205,8 @@ export const generateResult = async (
       req.userDetails?.schoolId
     );
 
+    const resultRemarksAndVerdict = await teacherAdminRemarksCollection.find({schoolId: req.userDetails?.schoolId});
+
     const classStudentIds = studentsInClass.map((s) => s.id);
 
     const classAssessments = await resultCollection.find({
@@ -253,7 +256,11 @@ export const generateResult = async (
         studentSubjectAverage = studentSubjectTotal / studentsRecord.length;
       }
 
-      console.log("studentSubjectTotal / studentsRecord.length", studentSubjectTotal, studentsRecord.length,  studentSubjectAverage);
+      // console.log("studentSubjectTotal / studentsRecord.length", studentSubjectTotal, studentsRecord.length,  studentSubjectAverage);
+
+      const resultRemark = resultRemarksAndVerdict.find(r => studentSubjectAverage >= r?.minimum && studentSubjectAverage <= r?.maximum);
+
+      // console.log("Result remark", resultRemark);
 
       studentsAverage.push({
         studentId: studentsInClass[i].id,
@@ -264,7 +271,10 @@ export const generateResult = async (
         schoolId: schoolDetails?._id,
         studentSubjectAverage,
         studentSubjectTotal,
-        verdict: studentSubjectAverage >= 60 ? "pass" : "fail",
+        classTeacherRemark: resultRemark?.classTeachersRemark,
+        principalsRemark: resultRemark?.principalsRemark,
+        verdict: resultRemark?.verdict,
+        includeWeakSubjects: resultRemark?.includeImprovementSubjects
       });
     }
 
@@ -302,13 +312,13 @@ export const generateResult = async (
       studentsAverage[i].position = getOrdinalSuffix(studentPosition);
     }
 
-    const resultsAlreadyGenerated =
-      await classPositionAndRemarksCollection.find({
-        studentClass: classId,
-        term: schoolDetails?.currentTerm,
-        year: schoolDetails?.currentYear,
-        schoolId: schoolDetails?._id,
-      });
+    // const resultsAlreadyGenerated =
+    //   await classPositionAndRemarksCollection.find({
+    //     studentClass: classId,
+    //     term: schoolDetails?.currentTerm,
+    //     year: schoolDetails?.currentYear,
+    //     schoolId: schoolDetails?._id,
+    //   });
 
     await classPositionAndRemarksCollection.deleteMany({
       studentClass: classId,
@@ -317,21 +327,21 @@ export const generateResult = async (
       schoolId: schoolDetails?._id,
     });
 
-    for (let i = 0; i < resultsAlreadyGenerated.length; i++) {
-      for (let j = 0; j < studentsAverage.length; j++) {
-        if (
-          studentsAverage[j].studentId ==
-          resultsAlreadyGenerated[i].studentId.toString()
-        ) {
-          studentsAverage[j].classTeacherRemark =
-            resultsAlreadyGenerated[i].classTeacherRemark;
-          studentsAverage[j].principalsRemark =
-            resultsAlreadyGenerated[i].principalsRemark;
-        }
-      }
-    }
+    // for (let i = 0; i < resultsAlreadyGenerated.length; i++) {
+    //   for (let j = 0; j < studentsAverage.length; j++) {
+    //     if (
+    //       studentsAverage[j].studentId ==
+    //       resultsAlreadyGenerated[i].studentId.toString()
+    //     ) {
+    //       studentsAverage[j].classTeacherRemark =
+    //         resultsAlreadyGenerated[i].classTeacherRemark;
+    //       studentsAverage[j].principalsRemark =
+    //         resultsAlreadyGenerated[i].principalsRemark;
+    //     }
+    //   }
+    // }
 
-    console.log("studentsAverage", studentsAverage);
+    // console.log("studentsAverage", studentsAverage);
 
     await classPositionAndRemarksCollection.create(studentsAverage);
 
