@@ -182,7 +182,8 @@ export const generateResultV2 = async (
             role,
             term,
             year,
-            classSize
+            classSize,
+            isSpecialClass
           )}
 
               ${subjectAndPositionTable(response)}

@@ -3,7 +3,7 @@ import { schoolProfileCollectionType } from "../models/schoolProfile"
 import { studentsCollectionType } from "../models/students"
 import { resultCollectionType } from "../models/resultModel"
 
-export const resultHeaderTable = (schoolDetails: schoolProfileCollectionType, studentDetails: studentsCollectionType) => {
+export const resultHeaderTable = (schoolDetails: schoolProfileCollectionType, studentDetails: any) => {
     return `
         <table style="width: 100%; margin-bottom: 5px;" border="1">
           <tr>
@@ -35,7 +35,8 @@ export const studentAndResultDetailsTable = (
     role: string,
     term: string,
     year: string,
-    classSize: number
+    classSize: number,
+    isSpecialClass: boolean
     ) => {
     return `
         <table style="width: 100%; margin-bottom: 5px; font-size: 12px;" border="1">
@@ -58,7 +59,7 @@ export const studentAndResultDetailsTable = (
                   ? schoolClass.find((c: any) => c._id == studentDetails?.classId._id)?.schoolClass
                   : studentDetails?.classId?.schoolClass
               }</div></td>
-            <td><div style="padding: 5px;">Position: ${result?.position ? result?.position : "--"}</div></td>
+            <td><div style="padding: 5px;">Position: ${isSpecialClass ? "--" : (result?.position ? result?.position : "--")}</div></td>
             <td><div style="padding: 5px;">Verdict: ${(result?.verdict)?.toLocaleUpperCase()}</div></td>
             <td><div style="padding: 5px;">Class Size: ${classSize}</div></td>
             </tr>
