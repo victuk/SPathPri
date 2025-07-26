@@ -460,7 +460,7 @@ v1Routes.put("/staff/:id", updateStaff);
 v1Routes.delete("/staff/:id", removeStaffFromSchool);
 
 // Student routes
-v1Routes.post("/students/:page/:limit", getStudents);
+v1Routes.post("/students", getStudents);
 v1Routes.get("/student/:id", getStudent);
 v1Routes.post(
   "/student",
@@ -487,12 +487,12 @@ v1Routes.get("/single-student-result/:page/:limit", getSingleStudentResult);
 v1Routes.put(`/student-result/:recordId`, updateStudentResult);
 v1Routes.put(
   "/students-class",
-  roleBasedAccess(["super-admin", "admin", "teacher"]),
+  roleBasedAccess(["super-admin", "admin"]),
   changeStudentsClass
 );
 v1Routes.put(
   "/promote-students",
-  roleBasedAccess(["super-admin", "admin", "teacher"]),
+  roleBasedAccess(["super-admin", "admin"]),
   promoteStudents
 );
 v1Routes.put("/generate-result", generateResult);

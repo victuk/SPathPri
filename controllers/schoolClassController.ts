@@ -10,6 +10,7 @@ import { getOrdinalSuffix } from "../utils/ordinalSuffix";
 import { classPositionAndRemarksCollection } from "../models/classPositionAndRemarksModel";
 import { staffsCollection } from "../models/staffs";
 import { teacherAdminRemarksCollection } from "../models/teacherAdminRemarksModel";
+import { studentPositionAndRemark } from "../models/positionAndRemarksModel";
 
 export const getSchoolClasses = async (
   req: CustomRequest,
@@ -563,3 +564,94 @@ export const updateResultRemark = async (
     next(error);
   }
 };
+
+export const promoteToClassV2 = async (
+  req: CustomRequest,
+  res: Response,
+  next: NextFunction
+) => {
+  try {
+    const {studentsToPromote, newClass, verdict} = req.body;
+
+    console.log(req.body);
+
+    const resultIds = studentsToPromote.map((s: any) => s.resultId);
+
+    const studentIds = studentsToPromote.map((s: any) => s.studentId);
+
+    const anyFailedStudent = await classPositionAndRemarksCollection.find({
+      _id: {$in: resultIds},
+      verdict: "fail",
+      schoolId: req.userDetails?.schoolId
+    });
+
+    if(anyFailedStudent.length > 0) {
+      res.status(400).send({
+        message: `Your promotion list contains ${anyFailedStudent.length} students that have failed, kindly remove all failed students from the list`
+      });
+      return;
+    }
+
+    console.log("all students", await studentsCollection.find({_id: {$in: studentIds}, schoolId: req.userDetails?.schoolId}));
+
+    await studentsCollection.updateMany({_id: {$in: studentIds}, schoolId: req.userDetails?.schoolId}, {
+      classId: newClass
+    });
+
+    await classPositionAndRemarksCollection.updateMany({
+      _id: {$in: resultIds},
+      schoolId: req.userDetails?.schoolId
+    }, {
+      verdict
+    });
+
+    res.send({
+      message: "Students promoted successfully"
+    });
+
+
+  } catch (error) {
+    next(error);
+  }
+}
+
+export const refreshStudentTotalAndAverageV2 = async (
+  req: CustomRequest,
+  res: Response,
+  next: NextFunction
+) => {
+  try {
+    const {
+      resultId, studentId, studentClass, term, year
+    } = req.body;
+
+    const results = await resultCollection.find({
+      studentId, studentClass, term, year
+    });
+
+    let total = 0;
+
+    let average = 0;
+
+    for(let i = 0; i < results.length; i++) {
+      total += total + results[i].testsAndExamTotal;
+    }
+
+    average = total / results.length;
+
+    const updatedTotalAndAverage = await studentPositionAndRemark.findByIdAndUpdate(resultId, {
+      totalSubjectScores: total,
+      studentAverage: average,
+      numberOfSubjectsOffered: results.length
+    }, {new: true});
+
+    res.send({
+      message: "Student's total and average refreshed",
+      result: updatedTotalAndAverage
+    });
+
+  } catch (error) {
+    next(error);
+  }
+}
+

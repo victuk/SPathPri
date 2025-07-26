@@ -30,7 +30,6 @@ export const getStudents = async (
   next: NextFunction
 ) => {
   try {
-    const { page, limit } = req.params;
 
     const { searchKeyword, classId } = req.body;
 
@@ -59,16 +58,10 @@ export const getStudents = async (
 
     query.schoolId = staffDetails?.schoolId;
 
-    const students = await studentsCollection.paginate(query, {
-      page: page ? parseInt(page) : 1,
-      limit: limit ? parseInt(limit) : 10,
-      sort: { firstName: -1, otherNames: -1, surname: -1 },
-      populate: [
-        {
-          path: "classId",
-        },
-      ],
-    });
+    const students = await studentsCollection
+    .find(query)
+    .populate("classId")
+    .sort({ firstName: -1, otherNames: -1, surname: -1 });
 
     res.send({
       result: students,
@@ -314,6 +307,12 @@ export const changeStudentsClass = async (
     const schoolDetails = await schoolProfileCollection.findById(
       req.userDetails?.schoolId
     );
+
+    await studentsCollection.updateMany({
+      _id: { $in: studentIds },
+    }, {
+      classId: newClassId
+    });
 
     await resultCollection.updateMany(
       {
@@ -2092,11 +2091,45 @@ export const promoteStudents = async (
   next: NextFunction
 ) => {
   try {
-    const { studentTrack, studentIds, newClassId } = req.body;
+    const { studentTrack, studentIds, newClassId, verdict } = req.body;
+
+    const schoolDetails = await schoolProfileCollection.findById(req.userDetails?.schoolId);
 
     const students = await studentsCollection.find({
       _id: { $in: studentIds },
     });
+
+    
+    const uniqueStudentClass: string[] = [];
+    
+    for(let i = 0; i < students.length; i++) {
+      if(uniqueStudentClass.includes((students[i].classId).toString())) {
+        continue;
+      }
+      uniqueStudentClass.push((students[i].classId).toString());
+    }
+
+    const studentsThatFailed = await classPositionAndRemarksCollection.find({
+      studentId: {$in: studentIds},
+      studentClass: uniqueStudentClass[0],
+      term: schoolDetails?.currentTerm,
+      year: schoolDetails?.currentYear,
+      verdict: "fail"
+    }).populate("studentId");
+
+    if(studentsThatFailed.length > 0) {
+      res.status(400).send({
+        message: `${studentsThatFailed.map((s: any) => (`${s?.studentId?.firstName} ${s?.studentId?.otherNames} ${s?.studentId?.surname}`))} failed and can't be promoted`
+      });
+      return;
+    }
+    
+    if(uniqueStudentClass.length > 1) {
+      res.status(400).send({
+        message: "All students to be promoted are to come from a single class."
+      });
+      return;
+    }
 
     await studentsCollection.updateMany(
       {
@@ -2107,6 +2140,15 @@ export const promoteStudents = async (
         studentTrack,
       }
     );
+
+    await classPositionAndRemarksCollection.updateMany({
+      studentId: {$in: studentIds},
+      studentClass: uniqueStudentClass[0],
+      term: schoolDetails?.currentTerm,
+      year: schoolDetails?.currentYear
+    }, {
+      verdict
+    });
 
     res.send({
       message: `The following students have been promoted: ${students

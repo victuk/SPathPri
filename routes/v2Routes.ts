@@ -11,6 +11,7 @@ import { getSingleStudentResultByRecordIdV2, getSingleStudentResultV2 } from "..
 import { assignScratchCardV2, cardSummaryV2, createSchoolScratchCardsV2, deleteBulkScratchCardsV2, resetScratchCardAttempt, scratchCardV2, searchScratchCardV2, unpairScratchCardV2, viewSchoolPairedScratchCardsV2, viewSchoolUnpairedScratchCardsV2 } from "../controllers/scratchCardController";
 import { classPositionAndRemarksCollection } from "../models/classPositionAndRemarksModel";
 import { addAdminAffectiveAssessmentListV2, deleteAdminAffectiveAssessmentListV2, deleteTeacherAffectivAssessmentV2, getAdminAffectiveAssessmentListV2, getTeacherAffectiveAssessmentV2, updateAdminAffectiveAssessmentListV2, updateAffectiveAssessmentV2 } from "../controllers/assessmentController";
+import { promoteToClassV2, refreshStudentTotalAndAverageV2 } from "../controllers/schoolClassController";
 
 const v2Routes = Router();
 
@@ -103,5 +104,8 @@ v2Routes.delete("/admin/affective-assessment/:id", deleteAdminAffectiveAssessmen
 v2Routes.put("/teacher/affective-assessments/update", updateAffectiveAssessmentV2);
 v2Routes.patch("/teacher/affective-assessments", deleteTeacherAffectivAssessmentV2);
 v2Routes.post("/teacher/affective-assessments", getTeacherAffectiveAssessmentV2);
+
+v2Routes.put("/promote-students", promoteToClassV2);
+v2Routes.put("/refresh-total-and-average", refreshStudentTotalAndAverageV2);
 
 export default v2Routes;
