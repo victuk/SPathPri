@@ -88,7 +88,7 @@ async function addTeacher(req: CustomRequest, res: Response, next: NextFunction)
         
         await sendEmail({
           to: email,
-          subject: `School - Email Verification`,
+          subject: `[[${process.env?.PLATFORM_NAME}]] - Email Verification`,
           body: `
                         <div style="padding: 20px">
                               

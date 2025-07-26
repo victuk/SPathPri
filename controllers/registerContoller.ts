@@ -66,9 +66,9 @@ async function registerStaff(req: CustomRequest, res: Response, next: NextFuncti
       sentVia: "email", purpose: "verifyemail"
     });
 
-    await sendEmail({
+    sendEmail({
       to: email,
-      subject: `School - Email Verification`,
+      subject: `[[${process.env?.PLATFORM_NAME}]] - Email Verification`,
       body: `
                     <div style="padding: 20px">
                         <h1>OTP</h1>
@@ -161,9 +161,9 @@ async function registerStudents(req: CustomRequest, res: Response, next: NextFun
       sentVia: "email", purpose: "verifyemail"
     });
     
-    await sendEmail({
+    sendEmail({
       to: email,
-      subject: `School - Email Verification`,
+      subject: `[[${process.env?.PLATFORM_NAME}]] - Email Verification`,
       body: `
                     <div style="padding: 20px">
                         <h1>OTP</h1>
@@ -247,9 +247,9 @@ async function registerSuperAdmins(req: CustomRequest, res: Response, next: Next
       sentVia: "email", purpose: "verifyemail"
     });
 
-    await sendEmail({
+    sendEmail({
       to: email,
-      subject: `School - Email Verification`,
+      subject: `[[${process.env?.PLATFORM_NAME}]] - Email Verification`,
       body: `
                     <div style="padding: 20px">
                         <h1>OTP</h1>

@@ -1286,16 +1286,21 @@ export const createStudent = async (
         : null,
     });
 
-    await sendEmail({
+    sendEmail({
       to: email,
-      subject: `${process.env.PLATFORM_NAME} - New student credential`,
+      subject: `[[${process.env?.PLATFORM_NAME}]] ${schoolDetails?.schoolName} - Student Registration`,
       body: `
                 <div>
-                    <div>Welcome ${email}, here is your user credential for ${process.env.PLATFORM_NAME}</div>
+                <div>Welcome Dear ${newStudent?.firstName} ${newStudent?.otherNames} ${newStudent?.surname},</div>
+                    <div>Welcome to ${process.env.PLATFORM_NAME} school Portal</div>
+                    <div>You've been registered as a student in ${schoolDetails?.schoolName}</div>
                     <div>
-                        <div>Email: ${email}</div>
-                        <div>Password: ${password}</div>
+                        <div>Your student ID is: ${newStudent?.studentUid}</div>
+                        <div>Your password is: ${password}</div>
                     </div>
+                    <div style="margin-bottom: 10px;">Contact the school admin to get yourself a scratch card to login with</div>
+                    <div>Yours Sincerely</div>
+                    <div>${process.env?.PLATFORM_NAME}</div>
                 </div>
             `,
     });
@@ -1734,9 +1739,9 @@ export const createStaff = async (
       schoolId,
     });
 
-    await sendEmail({
+    sendEmail({
       to: email,
-      subject: `${process.env.PLATFORM_NAME} - New Staff Login Details`,
+      subject: `[[${process.env.PLATFORM_NAME}]] - New Staff Login Details`,
       body: `
                   <div>
                       <div>Your profile has been created on ${process.env.PLATFORM_NAME}. Your login details are as follows</div>
