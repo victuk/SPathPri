@@ -186,11 +186,14 @@ export const generateResultV2 = async (
             isSpecialClass
           )}
 
-              ${subjectAndPositionTable(response)}
-
-              ${gradingSystemTable(schoolDetails!!, result, response)}
-
-              ${isSpecialClass ? (
+          <div style="display: flex; align-items: flex-start; gap: 5px;">
+                  <div style="width: 60%;">
+                    ${subjectAndPositionTable(response, result)}
+                    ${gradingSystemTable(schoolDetails!!)}
+                    ${classTeacherAndPrincipalRemarkTable(result, response)}
+                  </div>
+                  <div style="display: flex; flex-direction: column; width: 40%;">
+                  ${isSpecialClass ? (
                 `<table style="width: 100%; margin-bottom: 5px; font-size: 12px;" border="1">
               <tr>
                       <th style="padding: 5px;"><div style="padding: 5px; font-weight: bold;">SUBJECT</div></th>
@@ -222,13 +225,9 @@ export const generateResultV2 = async (
                 </tr>
               </table>`
               ) : ""}
-
-              ${behaviourAssessmentTable(filteredBehaviour)}
-
-              ${classTeacherAndPrincipalRemarkTable(result, response)}
-
-              
-              
+                    ${behaviourAssessmentTable(filteredBehaviour)}
+                  </div>
+                </div>
               <div style="position: absolute; right: 10px; top: 80vh;"><img src="${stamp?.fileLink}" style="height: 180px; border-radius: 5px;"></div>
               <!-- <div style="padding: 5px; text-align: right;"><img src="${stamp?.fileLink}" style="height: 100px; border-radius: 5px;"></div> -->
             </div>

@@ -3,7 +3,7 @@ import { schoolProfileCollectionType } from "../models/schoolProfile"
 import { studentsCollectionType } from "../models/students"
 import { resultCollectionType } from "../models/resultModel"
 
-export const resultHeaderTable = (schoolDetails: schoolProfileCollectionType, studentDetails: any) => {
+export const resultHeaderTable = (schoolDetails: schoolProfileCollectionType, studentDetails: studentsCollectionType) => {
     return `
         <table style="width: 100%; margin-bottom: 5px;" border="1">
           <tr>
@@ -74,7 +74,7 @@ export const studentAndResultDetailsTable = (
 }
 
 
-export const subjectAndPositionTable = (response: resultCollectionType[] | any[]) => {
+export const subjectAndPositionTable = (response: resultCollectionType[] | any[], result: any) => {
     return `
         <table style="width: 100%; margin-bottom: 5px;" border="1">
               <tr>
@@ -112,20 +112,20 @@ export const subjectAndPositionTable = (response: resultCollectionType[] | any[]
                     )
                     .join("")}
               </table>
-    `;
-}
-
-
-export const gradingSystemTable = (schoolDetails: schoolProfileCollectionType, result: any, response: any) => {
-    return `
-        <table style="width: 100%; margin-bottom: 5px; font-size: 12px;" border="1">
+              <table style="width: 100%; margin-bottom: 5px; font-size: 12px;" border="1">
                 <tr>
                       <td style="font-weight: bold; padding: 5px;">Student's total mark: ${result?.studentSubjectTotal} / ${response
                         // ?.filter((r: resultCollectionType) => r?.grade != null && r?.subjectAverage != null)
                         ?.length * 100}</td>
-                      <td style="font-weight: bold; padding: 5px;">Student's average mark: ${result?.studentSubjectAverage}</td>
-                    </tr>
-                    </table>
+                      <td style="font-weight: bold; padding: 5px;">Student's average mark: ${(result?.studentSubjectAverage)?.toFixed(2)}</td>
+                </tr>
+          </table>
+    `;
+}
+
+
+export const gradingSystemTable = (schoolDetails: schoolProfileCollectionType) => {
+    return `
                     <table style="width: 100%; margin-bottom: 5px; font-size: 12px;" border="1">
                     ${
                       schoolDetails?.gradingSystem == "grading-system-1" ? (
@@ -166,12 +166,12 @@ export const gradingSystemTable = (schoolDetails: schoolProfileCollectionType, r
 
 export const behaviourAssessmentTable = (filteredBehaviour: any) => {
     return `
-        <table style="width: 100%; margin-bottom: 0;" border="1">
+        <table style="width: 100%; margin-bottom: 5px;" border="1">
                           <tr>
                             <td style="font-weight: bold; padding: 5px; font-size: 12px; text-align: center;">BEHAVIOUR ASSESSMENT</td>
                           </tr>
                         </table>
-              <div style="display: flex">
+              <div style="display: flex; flex-direction: column;">
               <table style="width: 100%; margin-bottom: 5px;" border="1">
                 
                 <tr>
