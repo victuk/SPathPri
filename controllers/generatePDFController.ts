@@ -159,7 +159,7 @@ export const generateResultV2 = async (
 
       const isSpecialClass = specialClass.includes(classId);
 
-      const remarks = resultRemarks(result!!.studentSubjectAverage, response);
+      // const remarks = resultRemarks(result!!.studentSubjectAverage, response);
 
       const element = `
           <div style="padding: 10px; font-size: 8px;">
@@ -187,12 +187,12 @@ export const generateResultV2 = async (
           )}
 
           <div style="display: flex; align-items: flex-start; gap: 5px;">
-                  <div style="width: 60%;">
+                  <div style="width: 70%;">
                     ${subjectAndPositionTable(response, result)}
                     ${gradingSystemTable(schoolDetails!!)}
                     ${classTeacherAndPrincipalRemarkTable(result, response)}
                   </div>
-                  <div style="display: flex; flex-direction: column; width: 40%;">
+                  <div style="display: flex; flex-direction: column; width: 30%;">
                   ${isSpecialClass ? (
                 `<table style="width: 100%; margin-bottom: 5px; font-size: 12px;" border="1">
               <tr>

@@ -35,10 +35,6 @@ export const getStudents = async (
 
     console.log("searchKeyword, classId", searchKeyword, classId);
 
-    const staffDetails = await staffsCollection.findById(
-      req.userDetails?.userId
-    );
-
     const query: any = {};
 
     if (classId) {
@@ -56,7 +52,7 @@ export const getStudents = async (
       ];
     }
 
-    query.schoolId = staffDetails?.schoolId;
+    query.schoolId = req.userDetails?.schoolId;
 
     const students = await studentsCollection
     .find(query)
@@ -1228,11 +1224,12 @@ export const createStudent = async (
       });
     }
 
-    const password = "dominion1234";
-
+    
     const schoolDetails = await schoolProfileCollection.findById(
       req.userDetails?.schoolId
     );
+
+    const password = (schoolDetails?.schoolName)?.split(" ")[0] + "1234";
 
     console.log("req.userDetails?.userId", req.userDetails?.userId);
 
@@ -1553,14 +1550,10 @@ export const searchStaffByRole = async (
   try {
     const { searchKeyword, role, page, limit } = req.body;
 
-    const staffDetails = await staffsCollection.findById(
-      req.userDetails?.userId
-    );
-
     const staffList = await staffsCollection.paginate(
       {
         role,
-        schoolId: staffDetails?.schoolId,
+        schoolId: req.userDetails?.schoolId,
         $or: [
           { firstName: { $regex: searchKeyword, $options: "i" } },
           { otherNames: { $regex: searchKeyword, $options: "i" } },
@@ -1741,7 +1734,7 @@ export const createStaff = async (
 
     sendEmail({
       to: email,
-      subject: `[[${process.env.PLATFORM_NAME}]] - New Staff Login Details`,
+      subject: `${process.env.PLATFORM_NAME} - New Staff Login Details`,
       body: `
                   <div>
                       <div>Your profile has been created on ${process.env.PLATFORM_NAME}. Your login details are as follows</div>

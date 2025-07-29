@@ -288,29 +288,28 @@ export const generateResult = async (
     //   // }
     // }
 
-    studentsAverage.sort(
+    const sortedAverage = studentsAverage.sort(
       (a, b) => b.studentSubjectAverage - a.studentSubjectAverage
     );
 
-    // let position = 1;
+    let updatedStudentAverage: any = [];
 
-    for (let i = 0; i < studentsAverage.length; i++) {
-      // let studentPosition: number;
-      // if(i > 0) {
-      //   if(studentsAverage[i].studentSubjectAverage == studentsAverage[i - 1].studentSubjectAverage
-      //   ) {
-      //     studentPosition = position;
-      //   } else {
-      //     position = position + 1;
-      //     studentPosition = position;
-      //   }
-      // } else {
+    let position = 1;
 
-      
-      // }
-      // position + 1;
-      let studentPosition = i + 1;
-      studentsAverage[i].position = getOrdinalSuffix(studentPosition);
+    let firstPosition = sortedAverage[0];
+    firstPosition.position = getOrdinalSuffix(position);
+    firstPosition.positionWithoutOrdinal = position;
+    updatedStudentAverage.push(firstPosition);
+
+    for (let i = 1; i < sortedAverage.length; i++) {
+      if(sortedAverage[i].studentSubjectAverage == sortedAverage[i - 1].studentSubjectAverage) {
+        sortedAverage[i].position = getOrdinalSuffix(position);
+        sortedAverage[i].positionWithoutOrdinal = position;
+      } else {
+        position += 1;
+        sortedAverage[i].position = getOrdinalSuffix(position);
+        sortedAverage[i].positionWithoutOrdinal = position;
+      }
     }
 
     // const resultsAlreadyGenerated =
@@ -344,7 +343,7 @@ export const generateResult = async (
 
     // console.log("studentsAverage", studentsAverage);
 
-    await classPositionAndRemarksCollection.create(studentsAverage);
+    await classPositionAndRemarksCollection.create(sortedAverage);
 
     res.send({
       message: `Result created for class with ID ${classId}`,

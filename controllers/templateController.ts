@@ -11,12 +11,10 @@ export const getSchoolTemplates = async (
   next: NextFunction
 ) => {
   try {
-    const staffDetails = await staffsCollection.findById(
-      req.userDetails?.userId
-    );
+    
 
     const templates = await schoolTemplateCollection.find({
-      schoolId: staffDetails?.schoolId,
+      schoolId: req.userDetails?.schoolId,
     }).populate("uploadedById", "firstName surname role");
 
     res.send({
@@ -77,8 +75,7 @@ export const uploadSchoolTemplate = async (
     );
 
     const templateExists = await schoolTemplateCollection.findOne({
-      uploadedById: req.userDetails?.userId,
-      schoolId: staffDetails?.schoolId,
+      schoolId: req.userDetails?.schoolId,
       templateType,
     });
 
@@ -91,7 +88,7 @@ export const uploadSchoolTemplate = async (
         uploadedById: req.userDetails?.userId,
         templateType,
         fileLink,
-        schoolId: staffDetails?.schoolId,
+        schoolId: req.userDetails?.schoolId,
       });
     }
 
@@ -116,17 +113,6 @@ export const deleteSchoolTemplate = async (
           res.status(400).send({
             errorMessage: "School template ID is required."
           });
-        }
-
-        const staffDetails = await staffsCollection.findById(req.userDetails?.userId);
-
-        const templateDetails = await schoolTemplateCollection.findById(id);
-
-        if((staffDetails!!.schoolId).toString() != (templateDetails!!.schoolId).toString()) {
-            res.status(401).send({
-              message: "You are not allowed to take this action"
-            });
-            return;
         }
 
         const deletedFile = await schoolTemplateCollection.findByIdAndDelete(id);

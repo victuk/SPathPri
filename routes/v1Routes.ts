@@ -611,8 +611,8 @@ v1Routes.put("/school-session", updateSchoolSessionDetails);
 // School template controller
 v1Routes.get("/school-templates", getSchoolTemplates);
 v1Routes.get("/templates-by-type/:templateType", getTemplateByType);
-v1Routes.put("/school-template", uploadSchoolTemplate);
-v1Routes.delete("/school-template/:id", deleteSchoolTemplate);
+v1Routes.put("/school-template", roleBasedAccess(["admin", "super-admin"]), uploadSchoolTemplate);
+v1Routes.delete("/school-template/:id", roleBasedAccess(["admin", "super-admin"]), deleteSchoolTemplate);
 v1Routes.get("/assignment-template", getAssignmentTemplate);
 v1Routes.get("/curriculum-template", getCurriculumTemplate);
 

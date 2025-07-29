@@ -33,6 +33,10 @@ const classPositionAndRemarksSchema = new Schema(
       type: String,
       default: null,
     },
+    positionWithoutOrdinal: {
+      type: Number,
+      default: 0,
+    },
     studentSubjectTotal: {
       type: Number,
       default: 0,
