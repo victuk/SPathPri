@@ -59,7 +59,7 @@ const classPositionAndRemarksSchema = new Schema(
     },
     verdict: {
       type: String,
-      enum: ["pass", "fail"],
+      enum: ["promoted", "pass", "fail", "promoted-on-trial"],
       default: null,
     },
     totalStudentPresence: {
