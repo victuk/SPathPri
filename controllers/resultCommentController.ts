@@ -24,8 +24,9 @@ export const addNewResultComment = async (
             // Case 2: Existing range ends within the new range
             { maximum: { $gte: minimum, $lte: maximum } },
             // Case 3: New range is completely contained within an existing range
-            { minimum: { $lte: minimum }, maximum: { $gte: maximum } }
-        ]
+            { minimum: { $lte: minimum }, maximum: { $gte: maximum } },
+        ],
+        schoolId: req.userDetails?.schoolId
     });
 
     if(anyOverlap) {
@@ -80,7 +81,8 @@ export const updateResultComment = async (
             { maximum: { $gte: minimum, $lte: maximum } },
             // Case 3: New range is completely contained within an existing range
             { minimum: { $lte: minimum }, maximum: { $gte: maximum } }
-        ]
+        ],
+        schoolId: req.userDetails?.schoolId
     });
 
     if(anyOverlap) {
