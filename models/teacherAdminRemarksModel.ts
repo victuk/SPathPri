@@ -32,7 +32,7 @@ const teacherAdminRemarksSchema = new Schema(
     },
     verdict: {
       type: String,
-      enum: ["pass", "fail"],
+      enum: ["promoted", "pass", "fail"],
       required: true
     }
   },
