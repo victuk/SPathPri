@@ -190,41 +190,41 @@ export const generateResultV2 = async (
                   <div style="width: 70%;">
                     ${subjectAndPositionTable(response, result)}
                     ${gradingSystemTable(schoolDetails!!)}
+                    ${isSpecialClass ? (
+                        `<table style="width: 100%; margin-bottom: 5px; font-size: 12px;" border="1">
+                          <tr>
+                                  <th style="padding: 5px;"><div style="padding: 5px; font-weight: bold;">SUBJECT</div></th>
+                                  <th style="padding: 5px;"><div style="padding: 5px; font-weight: bold;">TEST</div></th>
+                                  <th style="padding: 5px;"><div style="padding: 5px; font-weight: bold;">PROJECT</div></th>
+                                  <th style="padding: 5px;"><div style="padding: 5px; font-weight: bold;">EXAM</div></th>
+                                  <th style="padding: 5px;"><div style="padding: 5px; font-weight: bold;">TOTAL</div></th>
+                              </tr>
+                            <tr>
+                                  <td style="padding: 5px;">Hand writing</td>
+                                  <td style="padding: 5px;">${result?.handWriting?.test}</td>
+                                  <td style="padding: 5px;">${result?.handWriting?.project}</td>
+                                  <td style="padding: 5px;">${result?.handWriting?.exams}</td>
+                                  <td style="padding: 5px;">${result?.handWriting?.total}</td>
+                            </tr>
+                            <tr>
+                                  <td style="padding: 5px;">CCA</td>
+                                  <td style="padding: 5px;">${result?.CCA?.test}</td>
+                                  <td style="padding: 5px;">${result?.CCA?.project}</td>
+                                  <td style="padding: 5px;">${result?.CCA?.exams}</td>
+                                  <td style="padding: 5px;">${result?.CCA?.total}</td>
+                            </tr>
+                            <tr>
+                                  <td style="padding: 5px;">Rhymes</td>
+                                  <td style="padding: 5px;">${result?.rhymes?.test}</td>
+                                  <td style="padding: 5px;">${result?.rhymes?.project}</td>
+                                  <td style="padding: 5px;">${result?.rhymes?.exams}</td>
+                                  <td style="padding: 5px;">${result?.rhymes?.total}</td>
+                            </tr>
+                          </table>`
+                      ) : ""}
                     ${classTeacherAndPrincipalRemarkTable(result, response)}
                   </div>
                   <div style="display: flex; flex-direction: column; width: 30%;">
-                  ${isSpecialClass ? (
-                `<table style="width: 100%; margin-bottom: 5px; font-size: 12px;" border="1">
-              <tr>
-                      <th style="padding: 5px;"><div style="padding: 5px; font-weight: bold;">SUBJECT</div></th>
-                      <th style="padding: 5px;"><div style="padding: 5px; font-weight: bold;">TEST</div></th>
-                      <th style="padding: 5px;"><div style="padding: 5px; font-weight: bold;">PROJECT</div></th>
-                      <th style="padding: 5px;"><div style="padding: 5px; font-weight: bold;">EXAM</div></th>
-                      <th style="padding: 5px;"><div style="padding: 5px; font-weight: bold;">TOTAL</div></th>
-                  </tr>
-                <tr>
-                      <td style="padding: 5px;">Hand writing</td>
-                      <td style="padding: 5px;">${result?.handWriting?.test}</td>
-                      <td style="padding: 5px;">${result?.handWriting?.project}</td>
-                      <td style="padding: 5px;">${result?.handWriting?.exams}</td>
-                      <td style="padding: 5px;">${result?.handWriting?.total}</td>
-                </tr>
-                <tr>
-                      <td style="padding: 5px;">CCA</td>
-                      <td style="padding: 5px;">${result?.CCA?.test}</td>
-                      <td style="padding: 5px;">${result?.CCA?.project}</td>
-                      <td style="padding: 5px;">${result?.CCA?.exams}</td>
-                      <td style="padding: 5px;">${result?.CCA?.total}</td>
-                </tr>
-                <tr>
-                      <td style="padding: 5px;">Rhymes</td>
-                      <td style="padding: 5px;">${result?.rhymes?.test}</td>
-                      <td style="padding: 5px;">${result?.rhymes?.project}</td>
-                      <td style="padding: 5px;">${result?.rhymes?.exams}</td>
-                      <td style="padding: 5px;">${result?.rhymes?.total}</td>
-                </tr>
-              </table>`
-              ) : ""}
                     ${behaviourAssessmentTable(filteredBehaviour)}
                   </div>
                 </div>
