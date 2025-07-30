@@ -191,7 +191,7 @@ export const generateResultV2 = async (
                     ${subjectAndPositionTable(response, result)}
                     ${gradingSystemTable(schoolDetails!!)}
                     ${isSpecialClass ? (
-                        `<table style="width: 100%; margin-bottom: 5px; font-size: 12px;" border="1">
+                        `<table style="width: 100%; margin-bottom: 5px; font-size: 10px;" border="1">
                           <tr>
                                   <th style="padding: 5px;"><div style="padding: 5px; font-weight: bold;">SUBJECT</div></th>
                                   <th style="padding: 5px;"><div style="padding: 5px; font-weight: bold;">TEST</div></th>
