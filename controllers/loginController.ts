@@ -64,6 +64,13 @@ async function studentLogin(
 
     const schoolDetails = await schoolProfileCollection.findById(studentScratchCard.schoolId);
 
+    if(schoolDetails?.accountStatus == "suspended") {
+      res.status(404).send({
+        message: `${schoolDetails.schoolName} has hereby been suspended from using Solvpath's services.`,
+      });
+      return;
+    }
+
     if(schoolDetails?.currentTerm != studentScratchCard.term && schoolDetails?.currentYear != studentScratchCard.year) {
       res.status(404).send({
         message: `Scratch card has expired. Kindly ask your school for a new scratch card for the current term and year.`,
@@ -204,6 +211,16 @@ async function staffLogin(
         message: "Staff not found",
       });
       return;
+    }
+
+    if(staffDetails.schoolId._id) {
+      const schoolDetails = await schoolProfileCollection.findById(staffDetails.schoolId._id);
+      if(schoolDetails?.accountStatus == "suspended") {
+        res.status(404).send({
+        message: `${schoolDetails.schoolName} has been suspended from using Solvpath portal.`,
+      });
+      return;
+      }
     }
 
     if (
