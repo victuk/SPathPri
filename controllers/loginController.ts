@@ -213,13 +213,15 @@ async function staffLogin(
       return;
     }
 
-    if(staffDetails.schoolId._id) {
-      const schoolDetails = await schoolProfileCollection.findById(staffDetails.schoolId._id);
-      if(schoolDetails?.accountStatus == "suspended") {
-        res.status(404).send({
-        message: `${schoolDetails.schoolName} has been suspended from using Solvpath portal.`,
-      });
-      return;
+    if(staffDetails.role !== "super-admin") {
+      if(staffDetails.schoolId._id) {
+        const schoolDetails = await schoolProfileCollection.findById(staffDetails.schoolId._id);
+        if(schoolDetails?.accountStatus == "suspended") {
+          res.status(404).send({
+          message: `${schoolDetails.schoolName} has been suspended from using Solvpath portal.`,
+        });
+        return;
+        }
       }
     }
 
