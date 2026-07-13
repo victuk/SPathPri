@@ -12,6 +12,11 @@ import { assignScratchCardV2, cardSummaryV2, createSchoolScratchCardsV2, deleteB
 import { classPositionAndRemarksCollection } from "../models/classPositionAndRemarksModel";
 import { addAdminAffectiveAssessmentListV2, deleteAdminAffectiveAssessmentListV2, deleteTeacherAffectivAssessmentV2, getAdminAffectiveAssessmentListV2, getTeacherAffectiveAssessmentV2, updateAdminAffectiveAssessmentListV2, updateAffectiveAssessmentV2 } from "../controllers/assessmentController";
 import { promoteToClassV2, refreshStudentTotalAndAverageV2 } from "../controllers/schoolClassController";
+import { resultCollection } from "../models/resultModel";
+import { schoolProfileCollection } from "../models/schoolProfile";
+import { Parser } from "@json2csv/plainjs";
+import path from "path";
+import { v4 } from "uuid";
 
 const v2Routes = Router();
 
@@ -55,6 +60,121 @@ v2Routes.post("/generate-my-result", async (req: CustomRequest, res: Response, n
     next(error);
   }
 });
+
+v2Routes.get(
+  "/master-sheet",
+  async (req: CustomRequest, res: Response, next: NextFunction) => {
+    try {
+      const schoolDetails = await schoolProfileCollection.findById(
+        req.userDetails?.schoolId,
+      );
+
+      if (!schoolDetails) {
+        res.status(400).send({
+          message: "You don't belong to a school. Contact school admin.",
+        });
+        return;
+      }
+
+      const response = await resultCollection
+        .find({
+          year: schoolDetails.currentYear,
+          schoolId: schoolDetails._id,
+        })
+        .populate("studentId", "-password")
+        .populate("teacherId", "-password")
+        .populate("subjectId")
+        .populate("studentClass")
+        .sort({
+          term: 1,
+          studentClass: 1,
+          studentId: 1,
+        });
+
+      const positionAndRemark = await classPositionAndRemarksCollection
+        .find({
+          year: schoolDetails.currentYear,
+          schoolId: schoolDetails._id,
+        })
+        .populate("studentId", "-password")
+        .populate("classTeacherId", "-password")
+        .populate("studentClass")
+        .sort({
+          term: 1,
+          studentClass: 1,
+          positionWithoutOrdinal: 1,
+        });
+
+      const CSVItself = response.map((value: any) => {
+        return {
+          "Student's Name": `${value?.studentId?.firstName} ${value?.studentId?.otherNames} ${value?.studentId?.surname}`,
+          "Student's Class": value?.studentClass?.schoolClass,
+          "Subject Teacher's Name": `${value?.teacherId?.firstName || "-"} ${value?.teacherId?.otherNames || "-"} ${value?.teacherId?.surname || "-"}`,
+          Subject: value.subjectId.subject,
+          Term: value.term,
+          Year: value.year,
+          "Test 1": value?.testOne,
+          "Test 2": value?.testTwo,
+          "Test 3": value?.testThree,
+          Exam: value?.examScore,
+          Total: value?.testsAndExamTotal,
+          Grade: value?.grade,
+        };
+      });
+
+      const opts = {};
+      const parser = new Parser(opts);
+      const csv = parser.parse(CSVItself);
+      // const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+
+      const filename = `mastersheet-assessments-${Date.now()}-${v4()}.csv`;
+      const outputPath = path.join(__dirname, "public", filename);
+
+      // Ensure the public directory exists, then write the file
+      if (!fs.existsSync(path.join(__dirname, "public"))) {
+        fs.mkdirSync(path.join(__dirname, "public"));
+      }
+
+      fs.writeFileSync(outputPath, csv, "utf-8");
+
+      const ResultAndPositionCSV = positionAndRemark.map((value: any) => {
+        return {
+          "Student's Name": `${value?.studentId?.firstName} ${value?.studentId?.otherNames} ${value?.studentId?.surname}`,
+          "Student's Class": value?.studentClass?.schoolClass,
+          "Class Teacher's Name": `${value?.teacherId?.firstName || "-"} ${value?.teacherId?.otherNames || "-"} ${value?.teacherId?.surname || "-"}`,
+          Term: value?.term,
+          Year: value?.year,
+          Position: value?.position,
+          Verdict: value?.verdict,
+        };
+      });
+
+      const optsTwo = {};
+      const parserTwo = new Parser(optsTwo);
+      const csvTwo = parserTwo.parse(ResultAndPositionCSV);
+      // const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+
+      const filenameTwo = `mastersheet-results-${Date.now()}-${v4()}.csv`;
+      const outputPathTwo = path.join(__dirname, "public", filenameTwo);
+
+      // Ensure the public directory exists, then write the file
+      if (!fs.existsSync(path.join(__dirname, "public"))) {
+        fs.mkdirSync(path.join(__dirname, "public"));
+      }
+
+      fs.writeFileSync(outputPathTwo, csvTwo, "utf-8");
+
+      // Respond back with the public URL so the client can download it later
+      res.status(200).json({
+        success: true,
+        fileUrl: filename,
+        positionResults: filenameTwo,
+      });
+    } catch (error) {
+      next(error);
+    }
+  },
+);
 
 v2Routes.post("/generate-student-result", async (req: CustomRequest, res: Response, next: NextFunction) => {
   let fileToDelete: any;
