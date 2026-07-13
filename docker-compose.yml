@@ -4,7 +4,6 @@ services:
     image: solvpath-pri:latest
     ports:
       - "3910:3000"
-      - REDIS_URL="redis://redis:6379"
     environment:
       - PORT=3000
     restart: always
@@ -15,7 +14,6 @@ services:
     image: solvpath-pri:latest
     ports:
       - "3920:3000"
-      - REDIS_URL="redis://redis:6379"
     environment:
       - PORT=3000
     restart: always
@@ -26,7 +24,6 @@ services:
     image: solvpath-pri:latest
     ports:
       - "3930:3000"
-      - REDIS_URL="redis://redis:6379"
     environment:
       - PORT=3000
     restart: always
