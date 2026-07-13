@@ -3,21 +3,7 @@ services:
     image: redis:7-alpine
 
 steps:
-  deploy-api:
-    image: docker:cli
-    volumes:
-      # Allows control over the host's Docker engine
-      - /var/run/docker.sock:/var/run/docker.sock
-      # Mount your production application folder on the VPS
-      - /var/www/solvpath_pri_sch:/host_env
-    commands:
-      # 1. Pull the latest code changes in the host directory (if applicable)
-      # 2. Change directory into the host folder where docker-compose.yml resides
-      - cp /host_env/.env .
-      
-      # 3. Run compose commands natively against the host's directory structure
-      - docker compose down
-      - docker compose up -d --build
+  # Step 1: Run your test suite in the isolated CI environment
   test-app:
     image: node:20-alpine
     environment:
@@ -27,8 +13,19 @@ steps:
       - npm install
       - npm test
 
+  # Step 2: Only runs if test-app passes perfectly
+  deploy-api:
+    image: docker:cli
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      - /var/www/solvpath_pri_sch:/host_env
+    commands:
+      # Change directory straight to the mounted host directory
+      - cd /host_env
+      # Force a clean rebuild on the host system
+      - docker compose down
+      - docker compose up -d --build
 
 when:
   - branch: main
     event: push
-    
