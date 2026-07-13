@@ -128,11 +128,11 @@ v2Routes.get(
       // const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
 
       const filename = `mastersheet-assessments-${Date.now()}-${v4()}.csv`;
-      const outputPath = path.join(__dirname, "public", filename);
+      const outputPath = path.join(__dirname, "../public", filename);
 
       // Ensure the public directory exists, then write the file
-      if (!fs.existsSync(path.join(__dirname, "public"))) {
-        fs.mkdirSync(path.join(__dirname, "public"));
+      if (!fs.existsSync(path.join(__dirname, "../public"))) {
+        fs.mkdirSync(path.join(__dirname, "../public"));
       }
 
       fs.writeFileSync(outputPath, csv, "utf-8");
@@ -155,11 +155,11 @@ v2Routes.get(
       // const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
 
       const filenameTwo = `mastersheet-results-${Date.now()}-${v4()}.csv`;
-      const outputPathTwo = path.join(__dirname, "public", filenameTwo);
+      const outputPathTwo = path.join(__dirname, "../public", filenameTwo);
 
       // Ensure the public directory exists, then write the file
-      if (!fs.existsSync(path.join(__dirname, "public"))) {
-        fs.mkdirSync(path.join(__dirname, "public"));
+      if (!fs.existsSync(path.join(__dirname, "../public"))) {
+        fs.mkdirSync(path.join(__dirname, "../public"));
       }
 
       fs.writeFileSync(outputPathTwo, csvTwo, "utf-8");
