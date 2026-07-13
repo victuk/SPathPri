@@ -2,7 +2,7 @@ import { NextFunction, response, Response } from "express";
 import { CustomRequest } from "../middleware/authenticatedUsersOnly";
 import { studentsCollection } from "../models/students";
 import { staffsCollection } from "../models/staffs";
-import { genOTP, hashPassword } from "../utils/authUtilities";
+import { genOTP, hashPassword, signJWT, verifyJWT } from "../utils/authUtilities";
 import { sendEmail } from "../utils/emailUtilities";
 import { resultCollection } from "../models/resultModel";
 import { subjectCollection } from "../models/subjectCollection";
@@ -18,6 +18,11 @@ import { AttendanceCollection } from "../models/studentsAttendance";
 import { pendingStudentsAssessmentRequestCollection } from "../models/pendingStudentsAssessmentRequest";
 import { schoolTemplateCollection } from "../models/schoolTemplateModel";
 import { notificationCollection } from "../models/notifications";
+import Joi from "joi";
+import { redisClient } from "../utils/redisClientUtil";
+import { formerStudentCollection } from "../models/formerStudentModel";
+import { formerStaffCollection } from "../models/formerStaffModel";
+import { StudentsScratchCardCollection } from "../models/studentsScratchCard";
 
 export const getStudents = async (
   req: CustomRequest,
@@ -25,15 +30,10 @@ export const getStudents = async (
   next: NextFunction
 ) => {
   try {
-    const { page, limit } = req.params;
 
     const { searchKeyword, classId } = req.body;
 
     console.log("searchKeyword, classId", searchKeyword, classId);
-
-    const staffDetails = await staffsCollection.findById(
-      req.userDetails?.userId
-    );
 
     const query: any = {};
 
@@ -52,18 +52,12 @@ export const getStudents = async (
       ];
     }
 
-    query.schoolId = staffDetails?.schoolId;
+    query.schoolId = req.userDetails?.schoolId;
 
-    const students = await studentsCollection.paginate(query, {
-      page: page ? parseInt(page) : 1,
-      limit: limit ? parseInt(limit) : 10,
-      sort: { firstName: -1, otherNames: -1, surname: -1 },
-      populate: [
-        {
-          path: "classId",
-        },
-      ],
-    });
+    const students = await studentsCollection
+    .find(query)
+    .populate("classId")
+    .sort({ firstName: -1, otherNames: -1, surname: -1 });
 
     res.send({
       result: students,
@@ -95,7 +89,8 @@ export const getStudentResult = async (
   next: NextFunction
 ) => {
   try {
-    const { classId, subjectId } = req.body;
+    console.log("req.body", req.body);
+    const { classId, subjectId, term, year } = req.body;
 
     const query: any = {};
 
@@ -107,19 +102,36 @@ export const getStudentResult = async (
       query.subjectId = subjectId;
     }
 
-    const staffDetails = await staffsCollection.findById(
-      req.userDetails?.userId
-    );
+    if(year) {
+      query.year = year;
+    }
 
-    const schoolDetails = await schoolProfileCollection.findById(
-      staffDetails?.schoolId
-    );
+    if(term) {
+      query.term = term;
+    }
+    
+    if(req.userDetails?.schoolId) {
+      query.schoolId = req.userDetails?.schoolId;
+    } else {
+      res.status(422).send({
+        message: "Choose a school to proceed"
+      });
+      return;
+    }
 
-    console.log("staffDetails", staffDetails);
-    console.log("schoolDetails", schoolDetails);
+    // const staffDetails = await staffsCollection.findById(
+    //   req.userDetails?.userId
+    // );
 
-    query.term = schoolDetails?.currentTerm;
-    query.year = schoolDetails?.currentYear;
+    // const schoolDetails = await schoolProfileCollection.findById(
+    //   staffDetails?.schoolId
+    // );
+
+    // console.log("staffDetails", staffDetails);
+    // console.log("schoolDetails", schoolDetails);
+
+    // query.term = schoolDetails?.currentTerm;
+    // query.year = schoolDetails?.currentYear;
 
     const response = await resultCollection.paginate(query, {
       page: req.params.page ? parseInt(req.params.page) : 1,
@@ -142,6 +154,8 @@ export const getStudentResult = async (
       ],
     });
 
+    console.log("response", response);
+
     res.send({
       message: "Class and subject",
       result: response,
@@ -157,7 +171,7 @@ export const CSVGetStudentResult = async (
   next: NextFunction
 ) => {
   try {
-    const { classId, subjectId } = req.body;
+    const { classId, subjectId, year, term } = req.body;
 
     const query: any = {};
 
@@ -169,12 +183,29 @@ export const CSVGetStudentResult = async (
       query.subjectId = subjectId;
     }
 
-    const schoolDetails = await schoolProfileCollection.findById(
-      req.userDetails?.schoolId
-    );
+    if(year) {
+      query.year = year;
+    }
 
-    query.term = schoolDetails?.currentTerm;
-    query.year = schoolDetails?.currentYear;
+    if(term) {
+      query.term = term;
+    }
+    
+    if(req.userDetails?.schoolId) {
+      query.schoolId = req.userDetails?.schoolId;
+    } else {
+      res.status(422).send({
+        message: "Choose a school to proceed"
+      });
+      return;
+    }
+
+    // const schoolDetails = await schoolProfileCollection.findById(
+    //   req.userDetails?.schoolId
+    // );
+
+    // query.term = schoolDetails?.currentTerm;
+    // query.year = schoolDetails?.currentYear;
 
     const response = await resultCollection
       .find(query)
@@ -232,6 +263,8 @@ export const getStudentTermResult = async (
       })
       .countDocuments();
 
+      console.log("response", response);
+
     res.send({
       message: "Class and subject",
       result: response,
@@ -270,6 +303,12 @@ export const changeStudentsClass = async (
     const schoolDetails = await schoolProfileCollection.findById(
       req.userDetails?.schoolId
     );
+
+    await studentsCollection.updateMany({
+      _id: { $in: studentIds },
+    }, {
+      classId: newClassId
+    });
 
     await resultCollection.updateMany(
       {
@@ -400,6 +439,95 @@ export const getSingleStudentResult = async (
   }
 };
 
+export const getSingleStudentResultByRecordIdV2 = async (
+  req: CustomRequest,
+  res: Response,
+  next: NextFunction
+) => {
+  try {
+
+    const studentId = req.userDetails?.userId;
+
+    const schoolId = req.userDetails?.schoolId;
+
+    const {recordId} = req.params;
+
+    const classValue = await classPositionAndRemarksCollection.findById(recordId);
+
+    if(!classValue) {
+      res.status(404).send({
+        message: "No result record found"
+      });
+      return;
+    }
+
+    const studentRecord = await resultCollection.find(
+      {
+        studentId,
+        term: classValue.term,
+        year: classValue.year,
+        studentClass: classValue.studentClass,
+        schoolId,
+      }
+    )
+    .populate("studentId", "-password")
+    .populate("teacherId", "-password")
+    .populate("subjectId")
+    .populate("studentClass");
+
+    res.send({
+      message: "Student records retrieved successfully",
+      result: studentRecord,
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const getSingleStudentResultV2 = async (
+  req: CustomRequest,
+  res: Response,
+  next: NextFunction
+) => {
+  try {
+
+    const studentId = req.userDetails?.userId;
+
+    const schoolId = req.userDetails?.schoolId;
+
+    const {term, year, classId} = req.body;
+
+    // const studentDetails = await studentsCollection.findById(
+    //   req.userDetails?.userId
+    // );
+
+    // const schoolDetails = await schoolProfileCollection.findById(
+    //   studentDetails?.schoolId
+    // );
+
+    const studentRecord = await resultCollection.find(
+      {
+        studentId,
+        term,
+        year,
+        studentClass: classId,
+        schoolId,
+      }
+    )
+    .populate("studentId", "-password")
+    .populate("teacherId", "-password")
+    .populate("subjectId")
+    .populate("studentClass");
+
+    res.send({
+      message: "Student records retrieved successfully",
+      result: studentRecord,
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
 export const updateStudentResult = async (
   req: CustomRequest,
   res: Response,
@@ -447,7 +575,7 @@ export const updateStudentResult = async (
       return;
     }
 
-    const remarkAndGradeResult = remarkAndGrade(total);
+    const remarkAndGradeResult = await remarkAndGrade(total, req.userDetails?.schoolId!!);
 
     const updatedResult = await resultCollection.findByIdAndUpdate(
       recordId,
@@ -482,6 +610,13 @@ export const resultUpdateRequest = async (
     const { studentAssessmentId, testOne, testTwo, testThree, exam } = req.body;
 
     console.log(req.body);
+
+    if(req.userDetails?.role == "super-admin") {
+      res.status(403).send({
+        message: "Super admins are not allowed to update student results"
+      });
+      return;
+    }
 
     const requestAlreadyExist =
       await pendingStudentsAssessmentRequestCollection.findOne({
@@ -586,7 +721,7 @@ export const approveOrDeclineResultUpdate = async (
         return;
       }
 
-      const remarkAndGradeResult = remarkAndGrade(total);
+      const remarkAndGradeResult = await remarkAndGrade(total, req.userDetails!!.schoolId!!);
 
       await resultCollection.findByIdAndUpdate(result.studentAssessmentId, {
         testOne: result.testOne,
@@ -831,7 +966,8 @@ export const getTeacherAssessment = async (
         year,
         schoolId: req.userDetails?.schoolId,
       })
-      .populate("studentId");
+      .populate("studentId")
+      .sort({"studentId.firstName": -1});
 
     res.send({
       subject,
@@ -878,7 +1014,7 @@ export const updateTeacherAssessment = async (
       Math.abs(testThree) +
       Math.abs(examScore);
 
-    const remarkAndGradeResult = remarkAndGrade(total);
+    const remarkAndGradeResult = await remarkAndGrade(total, req.userDetails?.schoolId!!);
 
     console.log("recordAlreadyExist", recordAlreadyExist);
 
@@ -1088,11 +1224,12 @@ export const createStudent = async (
       });
     }
 
-    const password = "dominion1234";
-
+    
     const schoolDetails = await schoolProfileCollection.findById(
       req.userDetails?.schoolId
     );
+
+    const password = (schoolDetails?.schoolName)?.split(" ")[0] + "1234";
 
     console.log("req.userDetails?.userId", req.userDetails?.userId);
 
@@ -1146,16 +1283,21 @@ export const createStudent = async (
         : null,
     });
 
-    await sendEmail({
+    sendEmail({
       to: email,
-      subject: `${process.env.PLATFORM_NAME} - New student credential`,
+      subject: `[[${process.env?.PLATFORM_NAME}]] ${schoolDetails?.schoolName} - Student Registration`,
       body: `
                 <div>
-                    <div>Welcome ${email}, here is your user credential for ${process.env.PLATFORM_NAME}</div>
+                <div>Welcome Dear ${newStudent?.firstName} ${newStudent?.otherNames} ${newStudent?.surname},</div>
+                    <div>Welcome to ${process.env.PLATFORM_NAME} school Portal</div>
+                    <div>You've been registered as a student in ${schoolDetails?.schoolName}</div>
                     <div>
-                        <div>Email: ${email}</div>
-                        <div>Password: ${password}</div>
+                        <div>Your student ID is: ${newStudent?.studentUid}</div>
+                        <div>Your password is: ${password}</div>
                     </div>
+                    <div style="margin-bottom: 10px;">Contact the school admin to get yourself a scratch card to login with</div>
+                    <div>Yours Sincerely</div>
+                    <div>${process.env?.PLATFORM_NAME}</div>
                 </div>
             `,
     });
@@ -1205,7 +1347,6 @@ export const updateStudent = async (
         otherNames,
         surname,
         gender,
-        // profilePic,
         lgaOfOrigin,
         stateOfOrigin,
         dateOfBirth,
@@ -1263,6 +1404,13 @@ export const removeStudentFromSchool = async (
       schoolId: null,
     });
 
+    await formerStudentCollection.create({
+      studentId: studentDetails._id,
+      schoolId: studentDetails.schoolId,
+      formerClass: studentDetails.classId,
+      dateRemoved: new Date()
+    });
+
     res.send({
       message: "Student removed from school Successfully",
     });
@@ -1271,52 +1419,48 @@ export const removeStudentFromSchool = async (
   }
 };
 
-export const deleteStudent = async (
-  req: CustomRequest,
-  res: Response,
-  next: NextFunction
-) => {
-  try {
-    const { id } = req.params;
+// export const deleteStudent = async (
+//   req: CustomRequest,
+//   res: Response,
+//   next: NextFunction
+// ) => {
+//   try {
+//     const { id } = req.params;
 
-    if (!id) {
-      res.status(400).send({
-        message: "Invalid ID",
-      });
-      return;
-    }
+//     if (!id) {
+//       res.status(400).send({
+//         message: "Invalid ID",
+//       });
+//       return;
+//     }
 
-    const studentDetails = await studentsCollection.findById(id);
+//     const studentDetails = await studentsCollection.findById(id);
 
-    if (!studentDetails) {
-      res.status(404).send({
-        message: "Student not found",
-      });
-      return;
-    }
+//     if (!studentDetails) {
+//       res.status(404).send({
+//         message: "Student not found",
+//       });
+//       return;
+//     }
 
-    // const deletedStudent = await studentsCollection.findByIdAndUpdate(id, {
-    //   schoolId: null,
-    // });
+//     const deletedStudent = await studentsCollection.findByIdAndUpdate(id, {
+//       classId: null,
+//       schoolId: null,
+//     });
 
-    const deletedStudent = await studentsCollection.findByIdAndUpdate(id, {
-      classId: null,
-      schoolId: null,
-    });
+//     await resultCollection.deleteMany({ studentId: id });
 
-    await resultCollection.deleteMany({ studentId: id });
+//     await studentPositionAndRemark.deleteMany({ studentID: id });
 
-    await studentPositionAndRemark.deleteMany({ studentID: id });
+//     await AttendanceCollection.deleteMany({ studentId: id });
 
-    await AttendanceCollection.deleteMany({ studentId: id });
-
-    res.send({
-      result: deletedStudent,
-    });
-  } catch (error) {
-    next(error);
-  }
-};
+//     res.send({
+//       result: deletedStudent,
+//     });
+//   } catch (error) {
+//     next(error);
+//   }
+// };
 
 export const getStaffs = async (
   req: CustomRequest,
@@ -1357,16 +1501,12 @@ export const getStaffByRole = async (
 
     const { role, page, limit } = req.params;
 
-    const staffDetails = await staffsCollection.findById(
-      req.userDetails?.userId
-    );
-
     const staffList = await staffsCollection.paginate(
-      { role, schoolId: staffDetails?.schoolId },
+      { role, schoolId: req.userDetails?.schoolId },
       {
         page: page ? parseInt(page) : 1,
         limit: limit ? parseInt(limit) : 10,
-        // sort: { firstName: -1 },
+        sort: { firstName: -1 },
       }
     );
 
@@ -1410,14 +1550,10 @@ export const searchStaffByRole = async (
   try {
     const { searchKeyword, role, page, limit } = req.body;
 
-    const staffDetails = await staffsCollection.findById(
-      req.userDetails?.userId
-    );
-
     const staffList = await staffsCollection.paginate(
       {
         role,
-        schoolId: staffDetails?.schoolId,
+        schoolId: req.userDetails?.schoolId,
         $or: [
           { firstName: { $regex: searchKeyword, $options: "i" } },
           { otherNames: { $regex: searchKeyword, $options: "i" } },
@@ -1503,6 +1639,66 @@ export const createStaff = async (
       schoolId,
     }: StaffInterface = req.body;
 
+    if(!otherNames) {
+      delete req.body.otherNames;
+    }
+
+    if(!phoneNumber) {
+      delete req.body.phoneNumber;
+    }
+
+    if(classTeacherOf?.length == 0) {
+      delete req.body.classTeacherOf;
+    }
+
+    if(subjectTeacherOf?.length  == 0) {
+      delete req.body.subjectTeacherOf;
+    }
+
+    if(!stateOfOrigin) {
+      delete req.body.stateOfOrigin;
+    }
+
+    if(!lgaOfOrigin) {
+      delete req.body.lgaOfOrigin;
+    }
+
+    const {error} = Joi.object({
+      firstName: Joi.string().required().messages({
+        "any.required": "First name is required"
+      }),
+      otherNames: Joi.string().optional(),
+      surname: Joi.string().required().messages({
+        "any.required": "Surname is required"
+      }),
+      email: Joi.string().email().required().messages({
+        "any.required": "Email is required",
+        "string.email": "Kindly input a valid email address"
+      }),
+      gender: Joi.string().valid("male", "female").required().messages({
+        "any.required": "First name is required"
+      }),
+      phoneNumber: Joi.string().optional(),
+      profilePic: Joi.string().uri().required().messages({
+        "any.required": "Profile picture is required"
+      }),
+      role: Joi.string().valid("teacher", "admin", "record-keeper", "super-admin").required().messages({
+        "any.required": "First name is required"
+      }),
+      classTeacherOf: Joi.array().optional(),
+      subjectTeacherOf: Joi.array().optional(),
+      stateOfOrigin: Joi.string().optional(),
+      lgaOfOrigin: Joi.string().optional(),
+      schoolId: Joi.string().optional(),
+    }).validate(req.body);
+
+    if(error) {
+      res.status(400).send({
+        errorMessage: error.message
+      });
+      return;
+    }
+
     const emailAlreadyExist = await staffsCollection.findOne({
       email: email.toLocaleLowerCase().trim(),
     });
@@ -1519,9 +1715,9 @@ export const createStaff = async (
     }
 
     const newStaff = await staffsCollection.create({
-      firstName: firstName[0].toLocaleUpperCase() + firstName.slice(1),
-      otherNames: otherNames[0].toLocaleUpperCase() + otherNames.slice(1),
-      surname: surname[0].toLocaleUpperCase() + surname.slice(1),
+      firstName: firstName[0].toLocaleUpperCase() + firstName.slice(1).trim(),
+      otherNames: otherNames[0].toLocaleUpperCase() + otherNames.slice(1).trim(),
+      surname: surname[0].toLocaleUpperCase() + surname.slice(1).trim(),
       email: email.toLocaleLowerCase().trim(),
       profilePic,
       staffUid: await createStaffId(schoolDetails!!.schoolUid),
@@ -1536,7 +1732,7 @@ export const createStaff = async (
       schoolId,
     });
 
-    await sendEmail({
+    sendEmail({
       to: email,
       subject: `${process.env.PLATFORM_NAME} - New Staff Login Details`,
       body: `
@@ -1575,8 +1771,8 @@ export const updateStaff = async (
       surname,
       email,
       gender,
-      profilePic,
       phoneNumber,
+      profilePic,
       role,
       classTeacherOf,
       subjectTeacherOf,
@@ -1584,14 +1780,77 @@ export const updateStaff = async (
       lgaOfOrigin,
     } = req.body;
 
+    if(!otherNames) {
+      delete req.body.otherNames;
+    }
+
+    if(!phoneNumber) {
+      delete req.body.phoneNumber;
+    }
+
+    if(classTeacherOf?.length == 0) {
+      delete req.body.classTeacherOf;
+    }
+
+    if(subjectTeacherOf?.length  == 0) {
+      delete req.body.subjectTeacherOf;
+    }
+
+    if(!stateOfOrigin) {
+      delete req.body.stateOfOrigin;
+    }
+
+    if(!lgaOfOrigin) {
+      delete req.body.lgaOfOrigin;
+    }
+
+
+
+    console.log("class teacher of::::", classTeacherOf);
+
+    const {error} = Joi.object({
+      firstName: Joi.string().required().messages({
+        "any.required": "First name is required"
+      }),
+      otherNames: Joi.string().optional(),
+      surname: Joi.string().required().messages({
+        "any.required": "Surname is required"
+      }),
+      profilePic: Joi.string().required().messages({
+        "any.required": "Profile picture is required"
+      }),
+      email: Joi.string().email().required().messages({
+        "any.required": "Email is required",
+        "string.email": "Kindly input a valid email address"
+      }),
+      gender: Joi.string().valid("male", "female").required().messages({
+        "any.required": "First name is required"
+      }),
+      phoneNumber: Joi.string().optional(),
+      role: Joi.string().valid("teacher", "admin", "record-keeper", "super-admin").required().messages({
+        "any.required": "First name is required"
+      }),
+      classTeacherOf: Joi.array().optional(),
+      subjectTeacherOf: Joi.array().optional(),
+      stateOfOrigin: Joi.string().optional(),
+      lgaOfOrigin: Joi.string().optional(),
+    }).validate(req.body);
+
+    if(error) {
+      res.status(400).send({
+        errorMessage: error.message
+      });
+      return;
+    }
+
     const updatedStaff = await staffsCollection.findByIdAndUpdate(id, {
-      firstName,
-      otherNames,
-      surname,
+      firstName: firstName[0].toLocaleUpperCase() + firstName.slice(1).trim(),
+      otherNames: otherNames[0].toLocaleUpperCase() + otherNames.slice(1).trim(),
+      surname: surname[0].toLocaleUpperCase() + surname.slice(1).trim(),
       email,
       gender,
-      profilePic,
       phoneNumber,
+      profilePic,
       role,
       classTeacherOf,
       subjectTeacherOf,
@@ -1615,8 +1874,35 @@ export const removeStaffFromSchool = async (
   try {
     const { id } = req.params;
 
+    if(!id) {
+      res.status(400).send({
+        errorMessage: "No staff ID supplied"
+      });
+      return;
+    }
+
+    const staffDetails = await staffsCollection.findById(id);
+
+    if(!staffDetails) {
+      res.status(404).send({
+        errorMessage: "Teacher not found"
+      });
+      return;
+    }
+
     await staffsCollection.findByIdAndUpdate(id, {
+      classTeacherOf: [],
+      subjectTeacherOf: [],
       schoolId: null,
+    });
+
+    await formerStaffCollection.create({
+      staffId: staffDetails._id,
+      classTeacherOf: staffDetails.classTeacherOf,
+      subjectTeacherOf: staffDetails.subjectTeacherOf,
+      role: staffDetails.role,
+      dateRemoved: new Date(),
+      schoolId: staffDetails.schoolId,
     });
 
     res.send({
@@ -1627,17 +1913,221 @@ export const removeStaffFromSchool = async (
   }
 };
 
+// For admin and super admin to retrieve a list of former school students
+export const adminsFormerStudentList = async (
+  req: CustomRequest,
+  res: Response,
+  next: NextFunction
+) => {
+  try {
+    
+    const {page, limit} = req.params;
+
+    const paginatedFormerStudent = await formerStudentCollection.paginate({schoolId: req.userDetails?.schoolId}, {
+      page: page ? parseInt(page) : 1,
+      limit: limit ? parseInt(limit) : 10
+    });
+
+    res.send({
+      message: "Former students retrieved successfully",
+      result: paginatedFormerStudent
+    });
+
+  } catch (error) {
+    next(error);
+  }
+}
+
+// For admin and super admin to retrieve a list of former school staffs
+export const adminsFormerStaffList = async (
+  req: CustomRequest,
+  res: Response,
+  next: NextFunction
+) => {
+  try {
+    
+    const {page, limit} = req.params;
+
+    const paginatedFormerStaffs = await formerStaffCollection.paginate({schoolId: req.userDetails?.schoolId}, {
+      page: page ? parseInt(page) : 1,
+      limit: limit ? parseInt(limit) : 10
+    });
+
+    res.send({
+      message: "Former staffs retrieved successfully",
+      result: paginatedFormerStaffs
+    });
+
+  } catch (error) {
+    next(error);
+  }
+}
+
+export const restoreStudent = async (
+  req: CustomRequest,
+  res: Response,
+  next: NextFunction
+) => {
+  try {
+    
+    const {studentId, studentClass, studentCardId} = req.body;
+
+    const schoolDetails = await schoolProfileCollection.findById(req.userDetails?.schoolId);
+
+    const restoredStudent = await studentsCollection.findByIdAndUpdate(studentId, {
+      classId: studentClass,
+      schoolId: req.userDetails?.schoolId
+    }, {new: true});
+
+    const cardAlreadyPaired = await StudentsScratchCardCollection.findOne({
+      scratchCardId: studentCardId,
+      studentId: {$ne: null}
+    });
+
+    if(cardAlreadyPaired) {
+      res.status(401).send({
+        message: "Card already paired"
+      });
+      return;
+    }
+
+    const studentPairedId = await StudentsScratchCardCollection.findOneAndUpdate({scratchCardId: studentCardId}, {
+      studentId: restoredStudent?._id,
+      dateIssued: new Date(),
+      term: schoolDetails?.currentTerm,
+      year: schoolDetails?.currentYear,
+      schoolId: req.userDetails?.schoolId
+    }, {new: true});
+
+    res.send({
+      message: "Student restored successfully",
+      studentPairedId
+    });
+
+  } catch (error) {
+    next(error);
+  }
+}
+
+export const restoreStaff = async (
+  req: CustomRequest,
+  res: Response,
+  next: NextFunction
+) => {
+  try {
+    
+    const {
+      staffId,
+      classTeacherOf,
+      subjectTeacherOf
+    } = req.body;
+
+    const restoredStaff = await staffsCollection.findByIdAndUpdate(staffId, {
+      classTeacherOf, subjectTeacherOf,
+      schoolId: req.userDetails?.schoolId
+    }, {new: true});
+
+    res.send({
+      message: "Staff restored successfully",
+      restoredStaff
+    });
+
+  } catch (error) {
+    next(error);
+  }
+}
+
+export const searchRemovedStudent = async (
+  req: CustomRequest,
+  res: Response,
+  next: NextFunction
+) => {
+  try {
+    const {searchValue} = req.body;
+
+    const result = await studentsCollection.find({
+      studentUid: searchValue,
+      schoolId: null
+    }).limit(100);
+
+    res.send({
+      message: "Students resolved",
+      result
+    });
+
+  } catch (error) {
+    next(error);
+  }
+}
+
+export const searchRemovedStaff = async (
+  req: CustomRequest,
+  res: Response,
+  next: NextFunction
+) => {
+  try {
+    const {searchValue} = req.body;
+
+    const result = await staffsCollection.find({
+      email: searchValue,
+      schoolId: null
+    }).limit(100);
+
+    res.send({
+      message: "Students resolved",
+      result
+    });
+
+  } catch (error) {
+    next(error);
+  }
+}
+
 export const promoteStudents = async (
   req: CustomRequest,
   res: Response,
   next: NextFunction
 ) => {
   try {
-    const { studentTrack, studentIds, newClassId } = req.body;
+    const { studentTrack, studentIds, newClassId, verdict } = req.body;
+
+    const schoolDetails = await schoolProfileCollection.findById(req.userDetails?.schoolId);
 
     const students = await studentsCollection.find({
       _id: { $in: studentIds },
     });
+
+    
+    const uniqueStudentClass: string[] = [];
+    
+    for(let i = 0; i < students.length; i++) {
+      if(uniqueStudentClass.includes((students[i].classId).toString())) {
+        continue;
+      }
+      uniqueStudentClass.push((students[i].classId).toString());
+    }
+
+    const studentsThatFailed = await classPositionAndRemarksCollection.find({
+      studentId: {$in: studentIds},
+      studentClass: uniqueStudentClass[0],
+      term: schoolDetails?.currentTerm,
+      year: schoolDetails?.currentYear,
+      verdict: "fail"
+    }).populate("studentId");
+
+    if(studentsThatFailed.length > 0) {
+      res.status(400).send({
+        message: `${studentsThatFailed.map((s: any) => (`${s?.studentId?.firstName} ${s?.studentId?.otherNames} ${s?.studentId?.surname}`))} failed and can't be promoted`
+      });
+      return;
+    }
+    
+    if(uniqueStudentClass.length > 1) {
+      res.status(400).send({
+        message: "All students to be promoted are to come from a single class."
+      });
+      return;
+    }
 
     await studentsCollection.updateMany(
       {
@@ -1649,6 +2139,15 @@ export const promoteStudents = async (
       }
     );
 
+    await classPositionAndRemarksCollection.updateMany({
+      studentId: {$in: studentIds},
+      studentClass: uniqueStudentClass[0],
+      term: schoolDetails?.currentTerm,
+      year: schoolDetails?.currentYear
+    }, {
+      verdict
+    });
+
     res.send({
       message: `The following students have been promoted: ${students
         .map((s) => `${s.firstName} ${s.otherNames} ${s.surname}`)
@@ -1658,6 +2157,317 @@ export const promoteStudents = async (
     next(error);
   }
 };
+
+
+export const suspendStaff = async (
+  req: CustomRequest,
+  res: Response,
+  next: NextFunction
+) => {
+  try {
+
+    const {staffId} = req.body;
+
+    const staffDetails = await staffsCollection.findByIdAndUpdate(staffId, {
+      accountStatus: "suspended"
+    }, {new: true});
+
+    await redisClient.set(`secStaff-${staffDetails?.id}`, "suspended");
+
+    res.send({
+      message: "Staff suspended succesfully"
+    });
+
+  } catch (error) {
+    next(error);
+  }
+}
+
+
+
+export const liftStaffSuspense = async (
+  req: CustomRequest,
+  res: Response,
+  next: NextFunction
+) => {
+  try {
+
+    const {staffId} = req.body;
+
+    const staffDetails = await staffsCollection.findByIdAndUpdate(staffId, {
+      accountStatus: "active"
+    }, {new: true});
+
+    await redisClient.del(`secStaff-${staffDetails?.id}`);
+
+    res.send({
+      message: "Staff suspense lifted succesfully"
+    });
+
+  } catch (error) {
+    next(error);
+  }
+}
+
+
+export const suspendStudent = async (
+  req: CustomRequest,
+  res: Response,
+  next: NextFunction
+) => {
+  try {
+
+    const {studentId} = req.body;
+
+    const studentDetails = await studentsCollection.findByIdAndUpdate(studentId, {
+      accountStatus: "suspended"
+    }, {new: true});
+
+    await redisClient.set(`secStudent-${studentDetails?.id}`, "suspended");
+
+    res.send({
+      messsage: "Student suspended successfully"
+    });
+
+  } catch (error) {
+    next(error);
+  }
+}
+
+
+
+export const liftStudentSuspense = async (
+  req: CustomRequest,
+  res: Response,
+  next: NextFunction
+) => {
+  try {
+
+    const {studentId} = req.body;
+
+    const staffDetails = await studentsCollection.findByIdAndUpdate(studentId, {
+      accountStatus: "active"
+    }, {new: true});
+
+    await redisClient.del(`secStudent-${staffDetails?.id}`);
+
+    res.send({
+      message: "Student suspense lifted succesfully"
+    });
+
+  } catch (error) {
+    next(error);
+  }
+}
+
+
+export const suspendSchool = async (
+  req: CustomRequest,
+  res: Response,
+  next: NextFunction
+) => {
+  try {
+
+    const {schoolId} = req.body;
+
+    const schoolDetails = await schoolProfileCollection.findByIdAndUpdate(schoolId, {
+      accountStatus: "suspended"
+    }, {new: true});
+
+    await redisClient.set(`secSchool-${schoolDetails?.id}`, "suspended");
+
+    res.send({
+      message: "School suspended successfully"
+    });
+
+  } catch (error) {
+    next(error);
+  }
+}
+
+
+
+export const liftSchoolSuspense = async (
+  req: CustomRequest,
+  res: Response,
+  next: NextFunction
+) => {
+  try {
+
+    const {schoolId} = req.body;
+
+    const schoolDetails = await schoolProfileCollection.findByIdAndUpdate(schoolId, {
+      accountStatus: "active"
+    }, {new: true});
+
+    await redisClient.del(`secSchool-${schoolDetails?.id}`);
+
+    res.send({
+      message: "School suspense lifted succesfully"
+    });
+
+  } catch (error) {
+    next(error);
+  }
+}
+
+
+// Enable super admin to switch from one school to another
+export const changeSuperAdminSchool = async (
+  req: CustomRequest,
+  res: Response,
+  next: NextFunction
+) => {
+  try {
+    
+    const {newSchoolId} = req.body;
+
+    if(!newSchoolId) {
+      res.status(422).send({
+        message: "School ID to switch to not provided."
+      });
+      return;
+    }
+
+    const schoolDetails = await schoolProfileCollection.findById(newSchoolId);
+
+    if(!schoolDetails) {
+      res.status(404).send({
+        message: "School not found"
+      });
+      return;
+    }
+
+    const authDetails: any = verifyJWT(req.headers.authorization?.split(" ")[1] as string);
+
+    const newAuthDetails = {
+      userId: authDetails?.userId,
+      fullName: authDetails?.fullName,
+      role: authDetails.role,
+      accountStatus: authDetails.accountStatus,
+      deviceId: authDetails?.deviceId,
+      schoolId: newSchoolId
+    };
+
+    const newJWT = signJWT(newAuthDetails);
+
+    res.send({
+      message: "School switched successfully",
+      newJWT,
+      schoolDetails
+    });
+
+  } catch (error) {
+    next(error);
+  }
+}
+
+export const updateStudentAttendance = async (
+  req: CustomRequest,
+  res: Response,
+  next: NextFunction
+) => {
+  try {
+    
+    const {
+      recordId, totalStudentPresence, totalClassesHeld
+    } = req.body;
+
+    const {error} = Joi.object({
+      recordId: Joi.string().required(),
+      totalStudentPresence: Joi.number().required(),
+      totalClassesHeld: Joi.number().required()
+    }).validate(req.body);
+
+    if(error) {
+      res.status(400).send({
+        message: error.message
+      });
+      return;
+    }
+
+    if(totalStudentPresence > totalClassesHeld) {
+      res.status(400).send({
+        message: "Student's attended classes can't be greater than total classes held."
+      });
+      return;
+    }
+
+    const totalStudentAbsence = totalClassesHeld - totalStudentPresence;
+
+    const updatedRecord = await classPositionAndRemarksCollection.findByIdAndUpdate(recordId, {
+        totalStudentPresence, totalStudentAbsence, totalClassesHeld
+    }, {new: true});
+
+    res.send({
+      message: "Attendance record updated",
+      result: updatedRecord
+    });
+
+  } catch (error) {
+    next(error);
+  }
+}
+
+export const updateOpeningDate = async (
+  req: CustomRequest,
+  res: Response,
+  next: NextFunction
+) => {
+  try {
+
+    const {openingDate} = req.body;
+
+    const {error} = Joi.date().validate(openingDate);
+
+    if(error) {
+      res.status(400).send({
+        message: "Invalid date"
+      });
+      return;
+    }
+    
+    const updatedSchoolOpeningDate = await schoolProfileCollection.findByIdAndUpdate(req.userDetails?.schoolId, {
+      openingDate
+    }, {new: true});
+
+    await classPositionAndRemarksCollection.updateMany({
+      term: updatedSchoolOpeningDate?.currentTerm, year: updatedSchoolOpeningDate?.currentYear
+    }, {openingDate});
+
+    res.send({
+      message: "Opening date updated",
+      result: updatedSchoolOpeningDate
+    });
+
+  } catch (error) {
+    next(error);
+  }
+}
+
+export const clearOpeningDate = async (
+  req: CustomRequest,
+  res: Response,
+  next: NextFunction
+) => {
+  try {
+
+    await schoolProfileCollection.findByIdAndUpdate(req.userDetails?.schoolId, {
+      openingDate: null
+    }, {new: true});
+
+    // await classPositionAndRemarksCollection.updateMany({
+    //   term: updatedSchoolOpeningDate?.currentTerm, year: updatedSchoolOpeningDate?.currentYear
+    // }, {openingDate: null});
+
+    res.send({
+      message: "Opening date cleared"
+    });
+
+  } catch (error) {
+    next(error);
+  }
+}
 
 // const addStaffByEmail = async (
 //   req: CustomRequest,

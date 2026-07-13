@@ -6,6 +6,7 @@ import { curriculumCollection } from '../models/curriculumModel';
 import { staffsCollection } from '../models/staffs';
 import { studentsCollection } from '../models/students';
 import { schoolTemplateCollection } from '../models/schoolTemplateModel';
+import Joi from 'joi';
 
 export const getCurriculum = async (req: CustomRequest, res: Response, next: NextFunction) => {
     try {
@@ -92,6 +93,27 @@ export const createCurriculum = async (req: CustomRequest, res: Response, next: 
             fileLink
         } = req.body;
 
+        const {error} = Joi.object({
+            title: Joi.string().min(5).required().messages({
+                "any.required": "Title is required",
+                "string.min": "Title has to be more than 5 characters long"
+            }),
+            classId: Joi.string().required().messages({
+                "any.required": "Class ID is required"
+            }),
+            fileLink: Joi.string().uri().required().messages({
+                "any.required": "File Link is required",
+                "string.url": "File link must be a valid url"
+            })
+        }).validate(req.body);
+
+        if(error) {
+            res.status(400).send({
+                errorMessage: error.message
+            });
+            return;
+        }
+
         const staffDetail = await staffsCollection.findById(req.userDetails?.userId);
 
         if(!staffDetail?.schoolId) {
@@ -130,6 +152,34 @@ export const updateCurriculum = async (req: CustomRequest, res: Response, next: 
 
         const { id } = req.params;
 
+        if(!id) {
+            res.status(400).send({
+                errorMessage: "Curriculum ID can't be empty"
+            });
+            return;
+        }
+
+        const {error} = Joi.object({
+            title: Joi.string().min(5).required().messages({
+                "any.required": "Title is required",
+                "string.min": "Title has to be more than 5 characters long"
+            }),
+            classId: Joi.string().required().messages({
+                "any.required": "Class ID is required"
+            }),
+            fileLink: Joi.string().uri().required().messages({
+                "any.required": "File Link is required",
+                "string.url": "File link must be a valid url"
+            })
+        }).validate(req.body);
+
+        if(error) {
+            res.status(400).send({
+                errorMessage: error.message
+            });
+            return;
+        }
+
         let updatedCurriculum = await curriculumCollection.findByIdAndUpdate(id, {
             title,
             classId,
@@ -152,6 +202,13 @@ export const deleteCurriculum = async (req: CustomRequest, res: Response, next: 
     try {
 
         const { id } = req.params;
+
+        if(!id) {
+            res.status(400).send({
+                errorMessage: "Curriculum ID can't be empty"
+            });
+            return;
+        }
 
         const curriculumToDelete = await curriculumCollection.findById(id);
 
@@ -195,6 +252,13 @@ export const getCurriculumTemplate = async (
         schoolId: staffDetails?.schoolId,
         templateType: "curriculum-template",
       });
+
+      if(!templateDetails) {
+        res.status(404).send({
+            errorMessage: "No curriculum template details found"
+        });
+        return;
+      }
   
       res.send({
         message: "Curriculum template retrieved successfully",

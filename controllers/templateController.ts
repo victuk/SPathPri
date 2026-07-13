@@ -3,6 +3,7 @@ import { CustomRequest } from "../middleware/authenticatedUsersOnly";
 import { staffsCollection } from "../models/staffs";
 import { schoolProfileCollection } from "../models/schoolProfile";
 import { schoolTemplateCollection } from "../models/schoolTemplateModel";
+import Joi from "joi";
 
 export const getSchoolTemplates = async (
   req: CustomRequest,
@@ -10,12 +11,10 @@ export const getSchoolTemplates = async (
   next: NextFunction
 ) => {
   try {
-    const staffDetails = await staffsCollection.findById(
-      req.userDetails?.userId
-    );
+    
 
     const templates = await schoolTemplateCollection.find({
-      schoolId: staffDetails?.schoolId,
+      schoolId: req.userDetails?.schoolId,
     }).populate("uploadedById", "firstName surname role");
 
     res.send({
@@ -53,13 +52,30 @@ export const uploadSchoolTemplate = async (
   try {
     const { templateType, fileLink } = req.body;
 
+    const {error} = Joi.object({
+      templateType: Joi.string().valid("assignment-template", "curriculum-template", "result-stamp", "terminal-news-letter").required().messages({
+        "string.valid": `Template type can be either "assignment-template", "curriculum-template", "result-stamp" or "terminal-news-letter"`,
+        "any.required": "Template type is required"
+      }),
+      fileLink: Joi.string().uri().required().messages({
+        "string.url": "File link should be a valis url",
+        "any.required": "File link is required"
+      })
+    }).validate(req.body);
+
+    if(error) {
+      res.status(400).send({
+        errorMessage: error.message
+      });
+      return;
+    }
+
     const staffDetails = await staffsCollection.findById(
       req.userDetails?.userId
     );
 
     const templateExists = await schoolTemplateCollection.findOne({
-      uploadedById: req.userDetails?.userId,
-      schoolId: staffDetails?.schoolId,
+      schoolId: req.userDetails?.schoolId,
       templateType,
     });
 
@@ -72,7 +88,7 @@ export const uploadSchoolTemplate = async (
         uploadedById: req.userDetails?.userId,
         templateType,
         fileLink,
-        schoolId: staffDetails?.schoolId,
+        schoolId: req.userDetails?.schoolId,
       });
     }
 
@@ -93,15 +109,10 @@ export const deleteSchoolTemplate = async (
         
         const {id} = req.params;
 
-        const staffDetails = await staffsCollection.findById(req.userDetails?.userId);
-
-        const templateDetails = await schoolTemplateCollection.findById(id);
-
-        if((staffDetails!!.schoolId).toString() != (templateDetails!!.schoolId).toString()) {
-            res.status(401).send({
-                message: "You are not allowed to take this action"
-            });
-            return;
+        if(!id) {
+          res.status(400).send({
+            errorMessage: "School template ID is required."
+          });
         }
 
         const deletedFile = await schoolTemplateCollection.findByIdAndDelete(id);

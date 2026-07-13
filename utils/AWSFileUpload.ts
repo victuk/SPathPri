@@ -17,22 +17,28 @@ const S3 = new S3Client({
 
 export const uploadObjectFromFS = async (filePath: string, originamFileName: string) => {
 
-    console.log("File name", originamFileName.split("."));
+    try {
+        
+        console.log("File name", originamFileName.split("."));
+    
+        const key = v4()  + "." + originamFileName.split(".")[originamFileName.split(".").length - 1];
+    
+        const command = new PutObjectCommand({
+            Bucket: process.env.BUCKET,
+            Key: key,
+            Body: await readFile(filePath),
+        });
+    
+        const response = await S3.send(command);
+    
+        const [https, flyiolink] = (process.env.AWS_ENDPOINT_URL_S3 as string).split("//");
+    
+        const fileUrl = `${https}//${process.env.BUCKET}.${flyiolink}/${key}`;
+    
+        return {statusCode: response.$metadata.httpStatusCode, fileUrl};
+    } catch (error:any) {
+        throw new Error(error);
+    }
 
-    const key = v4()  + "." + originamFileName.split(".")[originamFileName.split(".").length - 1];
-
-    const command = new PutObjectCommand({
-        Bucket: process.env.BUCKET,
-        Key: key,
-        Body: await readFile(filePath),
-    });
-
-    const response = await S3.send(command);
-
-    const [https, flyiolink] = (process.env.AWS_ENDPOINT_URL_S3 as string).split("//");
-
-    const fileUrl = `${https}//${process.env.BUCKET}.${flyiolink}/${key}`;
-
-    return {statusCode: response.$metadata.httpStatusCode, fileUrl};
 
 }

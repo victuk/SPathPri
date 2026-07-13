@@ -50,10 +50,28 @@ const schoolProfileSchema = new Schema(
       required: true,
     },
 
+    openingDate: {
+      type: String,
+      default: null
+    },
+
     newsletterUrl: {
         type: String,
         default: null
+    },
+
+    gradingSystem: {
+      type: String,
+      enum: ["grading-system-1", "grading-system-2"],
+      required: true
+    },
+    
+    accountStatus: {
+      type: String,
+      default: "active",
+      enum: ["active", "suspended"]
     }
+
   },
   { timestamps: true }
 );

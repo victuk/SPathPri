@@ -38,7 +38,13 @@ const positionAndRemarks = new Schema({
         type: Number,
         default: 0
     },
-    year: String
+    resumptionDate: {
+        type: Date,
+        default: null
+    },
+    year: {
+        type: String
+    }
 },
 { timestamps: true });
 

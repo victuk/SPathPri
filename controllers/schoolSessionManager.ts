@@ -7,21 +7,21 @@ import { staffsCollection } from '../models/staffs';
 export const getSchoolSessionDetails = async (req: CustomRequest, res: Response, next: NextFunction) => {
     try {
         
-        const {userType} = req.params;
+        // const {userType} = req.params;
 
-        if(userType == "student") {
-            const studentDetails = await studentsCollection.findById(req.userDetails?.userId);
-            const schoolDetails = await schoolProfileCollection.findById(studentDetails?.schoolId, "schoolName schoolLogo schoolMotto currentTerm currentYear");
-            res.send({
-                result: schoolDetails
-            });
-        } else {
-            const staffDetails = await staffsCollection.findById(req.userDetails?.userId);
-            const schoolDetails = await schoolProfileCollection.findById(staffDetails?.schoolId, "schoolName schoolLogo schoolMotto currentTerm currentYear");
-            res.send({
-                result: schoolDetails
-            });
-        }
+        // if(userType == "student") {
+        //     const studentDetails = await studentsCollection.findById(req.userDetails?.userId);
+        //     const schoolDetails = await schoolProfileCollection.findById(studentDetails?.schoolId, "schoolName schoolLogo schoolMotto currentTerm currentYear");
+        //     res.send({
+        //         result: schoolDetails
+        //     });
+        // } else {
+        //     const staffDetails = await staffsCollection.findById(req.userDetails?.userId);
+        // }
+        const schoolDetails = await schoolProfileCollection.findById(req.userDetails?.schoolId, "schoolName schoolLogo schoolMotto currentTerm currentYear");
+        res.send({
+            result: schoolDetails
+        });
 
     } catch (error) {
         next(error);
@@ -33,16 +33,15 @@ export const updateSchoolSessionDetails = async (req: CustomRequest, res: Respon
 
         const {currentTerm, currentYear} = req.body;
         
-        const staffDetails = await staffsCollection.findById(req.userDetails?.userId);
 
-        if(!staffDetails) {
+        if(!req.userDetails?.schoolId) {
             res.status(400).send({
-                message: "Staff not found"
+                message: "School not found"
             });
             return;
         }
 
-        const updatedSchoolSessionDetails = await schoolProfileCollection.findByIdAndUpdate(staffDetails?.schoolId, {
+        const updatedSchoolSessionDetails = await schoolProfileCollection.findByIdAndUpdate(req.userDetails?.schoolId, {
             currentTerm, currentYear
         }, {new: true});
 

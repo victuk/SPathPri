@@ -4,6 +4,7 @@ import { schoolsCollection } from "../models/_schoolCollection";
 import { schoolProfileCollection } from "../models/schoolProfile";
 import { v4 } from "uuid";
 import { createSchoolId } from "../utils/idCreatorUtils";
+import Joi from "joi";
 
 
 
@@ -55,15 +56,76 @@ export const createSchool = async (req: CustomRequest, res: Response, next: Next
             location,
             schoolEmail,
             schoolPhoneNumber,
+            schoolGradingSystem,
             currentTerm,
             currentYear
         } = req.body;
+
+        const {error} = Joi.object({
+            schoolName: Joi.string().min(5).required().messages({
+                "string.min": "School name can not be less than 5 characters",
+                "any.required": "School name can't be empty"
+            }),
+            schoolLogo: Joi.string().uri().required().messages({
+                "string.uri": "School logo has to be a valid URI",
+                "any.required": "School logo can't be empty"
+            }),
+            schoolMotto: Joi.string().required().messages({
+                "any.required": "School motto can't be empty"
+            }),
+            schoolGradingSystem: Joi.string().required().messages({
+                "any.required": "Grading system can't be empty"
+            }),
+            location: Joi.string().required().messages({
+                "any.required": "Address can't be empty"
+            }),
+            schoolEmail: Joi.string().email({tlds: {allow: false}}).required().messages({
+                "string.email": "School email has to be a vaid email address",
+                "any.required": "School email is required"
+            }),
+            schoolPhoneNumber: Joi.string().min(11).required().messages({
+                "string.min": "School phone number should be at lest 11 characters",
+                "any.required": "School phone number can not be empty"
+            }),
+            currentTerm: Joi.string().required().messages({
+                "any.requried": "Current term can't be empty"
+            }),
+            currentYear: Joi.string().required().messages({
+                "any.requried": "Current term can't be empty"
+            })
+        }).validate(req.body);
+
+        if(error) {
+            res.status(400).send({
+                errorMessage: error.message
+            });
+            return;
+        }
+
+        const schoolEmailAlreadyExist = await schoolProfileCollection.findOne({schoolEmail});
+
+        if(schoolEmailAlreadyExist) {
+            res.status(400).send({
+                errorMessage: `${schoolEmail} already exists. Kindly use a different email`
+            });
+            return;
+        }
+
+        const schoolPhoneNumberAlreadyExist = await schoolProfileCollection.findOne({schoolPhoneNumber});
+
+        if(schoolPhoneNumberAlreadyExist) {
+            res.status(400).send({
+                errorMessage: `${schoolPhoneNumber} already exists. Kindly use a different phone number`
+            });
+            return;
+        }
 
         const newSchool = await schoolProfileCollection.create({
             schoolName,
             schoolUid: await createSchoolId(schoolName),
             schoolLogo,
             schoolMotto,
+            gradingSystem: schoolGradingSystem,
             location,
             schoolEmail,
             schoolPhoneNumber,
@@ -84,29 +146,85 @@ export const updateSchool = async (req: CustomRequest, res: Response, next: Next
     try {
         
         const {
-            ownerName,
             schoolName,
             schoolLogo,
-            schoolAddress,
-            email,
+            location,
+            schoolEmail,
+            schoolGradingSystem,
             phoneNumber,
-            motto
+            schoolMotto
         } = req.body;
 
         const {id} = req.params;
 
-        const newSchool = await schoolsCollection.findByIdAndUpdate(id, {
-            ownerName,
+        if(!id) {
+            res.status(400).send({
+                errorMessage: "ID can't be empty."
+            });
+            return;
+        }
+
+        const {error} = Joi.object({
+            schoolName: Joi.string().min(5).required().messages({
+                "string.min": "School name can not be less than 5 characters",
+                "any.required": "School name can't be empty"
+            }),
+            schoolLogo: Joi.string().required().messages({
+                "any.required": "School logo can't be empty"
+            }),
+            schoolMotto: Joi.string().required().messages({
+                "any.required": "School motto can't be empty"
+            }),
+            location: Joi.string().required().messages({
+                "any.required": "School address can't be empty"
+            }),
+            schoolEmail: Joi.string().email({tlds: {allow: false}}).required().messages({
+                "string.email": "School email has to be a vaid email address",
+                "any.required": "School email is required"
+            }),
+            schoolGradingSystem: Joi.string().required().messages({
+                "any.required": "Grading system can not be empty"
+            }),
+            schoolPhoneNumber: Joi.string().min(11).required().messages({
+                "string.min": "School phone number should be at lest 11 characters",
+                "any.required": "School phone number can not be empty"
+            }),
+            // currentTerm: Joi.string().required().messages({
+            //     "any.requried": "Current term can't be empty"
+            // }),
+            // currentYear: Joi.string().required().messages({
+            //     "any.requried": "Current term can't be empty"
+            // })
+        }).validate(req.body);
+
+        if(error) {
+            res.status(400).send({
+                errorMessage: error.message
+            });
+            return;
+        }
+
+        const schoolExists = await schoolProfileCollection.findById(id);
+
+        if(!schoolExists) {
+            res.status(404).send({
+                errorMessage: "School does not exist"
+            });
+            return;
+        }
+
+        const updatedSchool = await schoolProfileCollection.findByIdAndUpdate(id, {
             schoolName,
             schoolLogo,
-            schoolAddress,
-            email,
+            location,
+            schoolEmail,
+            gradingSystem: schoolGradingSystem,
             phoneNumber,
-            motto
-        });
+            schoolMotto
+        }, {new: true});
 
         res.send({
-            result: newSchool
+            result: updatedSchool
         });
 
     } catch (error) {
@@ -118,8 +236,6 @@ export const getMySchoolDetails = async (req: CustomRequest, res: Response, next
     try {
 
         const schoolId = req.userDetails?.schoolId;
-
-        console.log("req.userDetails", req.userDetails);
 
         const schoolDetails = await schoolProfileCollection.findById(schoolId);
 

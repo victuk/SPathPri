@@ -5,7 +5,8 @@ import paginate from "mongoose-paginate-v2";
 
 const staffsSchema = new Schema({
     firstName: {
-        type: String
+        type: String,
+        required: true
     },
 
     otherNames: {
@@ -13,7 +14,8 @@ const staffsSchema = new Schema({
     },
 
     surname: {
-        type: String
+        type: String,
+        required: true
     },
 
     staffUid: {

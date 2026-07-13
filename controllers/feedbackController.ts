@@ -8,6 +8,7 @@ import { schoolProfileCollection } from "../models/schoolProfile";
 import mongoose from "mongoose";
 import { feedbackCollection } from "../models/feedbackModel";
 import { staffsCollection } from "../models/staffs";
+import Joi from "joi";
 
 
 export const getSubmittedFeedbacks = async (
@@ -90,12 +91,51 @@ export const createFeedback = async (
             feedback,
         } = req.body;
 
+        if(!secondEmail) {
+            delete req.body.secondEmail;
+        }
+
+        const {error} = Joi.object({
+            secondEmail: Joi.string().email({tlds: {allow: false}}).optional().messages({
+                "string.email": "Kindly enter a valid email address"
+            }),
+            ticketAddressedTo: Joi.string().valid("school-admin", "solvpath").required().messages({
+                "string.valid": "You can adress your feedback to either 'school-admin', 'solvpath'",
+                "any.required": "Ticket addressed to is required"
+            }),
+            feedbackType: Joi.string().valid("feedback", "complaint", "others").required().messages({
+                "string.valid": "Your feedback type can be either 'feedback', 'complaint', 'others'",
+                "any.required": "Feedback type is required"
+            }),
+            title: Joi.string().min(5).required().messages({
+                "string.min": "Fedback title is too short",
+                "any.required": "Feedback title is required"
+            }),
+            feedback: Joi.string().min(10).required().messages({
+                "string.min": "Feedback is too short",
+                "any.required": "Feedback detail is required"
+            })
+        }).validate(req.body);
+
+        if(error) {
+            res.status(400).send({
+                errorMessage: error.message
+            });
+            return;
+        }
+
         let user: any;
 
         if(req.userDetails?.role == "student") {
             user = await studentsCollection.findById(req.userDetails?.userId);
         } else {
             user = await staffsCollection.findById(req.userDetails?.userId);
+        }
+
+        if(!user) {
+            res.status(404).send({
+                errorMessage: "No user found. It seems you're not logged in."
+            });
         }
 
         await feedbackCollection.create({
@@ -202,4 +242,38 @@ export const reopenFeedbackTicket = async (
     } catch (error) {
         next(error);
     }
+}
+
+export const anonymousFeedback = async (req: CustomRequest,
+    res: Response,
+    next: NextFunction) => {
+        try {
+
+            const {fullName,
+                email,
+                phoneNumber,
+                title,
+                feedback} = req.body;
+
+            await sendEmail({
+                to: email,
+                subject: `Solvpath - Complaint [[${title}]]`,
+                body: `
+                    <div>
+                        <div>Full Name: ${fullName}</div>
+                        <div>Email: ${email}</div>
+                        <div>Phone number: ${phoneNumber}</div>
+                        <div>Subject: ${title}</div>
+                        <div>Feedback/Complaint: ${feedback}</div>
+                    </div>
+                `
+            });
+
+            res.send({
+                message: "Email Sent"
+            });
+
+        } catch (error) {
+            next(error);
+        }
 }

@@ -9,6 +9,8 @@ export const resultRemarks = (studentAverage: number, data: resultCollectionType
 
     let classTeachersRemark = "";
 
+    // const studentAverage = resultDetails?.result?.studentSubjectAverage;
+
     // console.log("studentAverage", studentAverage);
 
     if(studentAverage <= 100 && studentAverage >= 88) {
@@ -29,7 +31,7 @@ export const resultRemarks = (studentAverage: number, data: resultCollectionType
     }
 
 
-    const subjectsToImproveOn = data?.filter((r: resultCollectionType) => r?.grade != null && r?.subjectAverage != null && r?.testsAndExamTotal < 50).map((r: any) => r?.subjectId?.subject);
+    const subjectsToImproveOn = data?.map((r: any) => r?.subjectId?.subject);
 
     // console.log("subjectsToImproveOn", subjectsToImproveOn);
 

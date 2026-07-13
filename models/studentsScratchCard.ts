@@ -16,6 +16,10 @@ const StudentsScratchCardSchema = new Schema({
         type: String,
         required: true
     },
+    loginChancesLeft: {
+        type: Number,
+        default: 4
+    },
     year: {
         type: String,
         required: true

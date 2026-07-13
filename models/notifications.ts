@@ -20,8 +20,12 @@ const notificationSchema = new Schema({
     },
     notificationType: {
         type: String,
-        enum: ["assessment-update-request", "assessment-update", "result-generation"],
+        enum: ["assessment-update-request", "assessment-update", "result-generation", "new-assignment", "others"],
         required: true
+    },
+    redirectPath: {
+        type: String,
+        default: null
     },
     schoolId: {
           type: Types.ObjectId,

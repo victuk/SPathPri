@@ -2,6 +2,7 @@ import { NextFunction, Response } from 'express';
 import { CustomRequest } from '../middleware/authenticatedUsersOnly';
 import { assignmentCollection } from '../models/assignmentModel';
 import { timeTableCollection } from '../models/timetableModel';
+import Joi from 'joi';
 
 export const getTimetables = async (req: CustomRequest, res: Response, next: NextFunction) => {
     try {
@@ -50,16 +51,12 @@ export const getTimetables = async (req: CustomRequest, res: Response, next: Nex
     }
 }
 
-export const getTimeTableByClass = async (req: CustomRequest, res: Response, next: NextFunction) => {
+export const getAllTimetables = async (req: CustomRequest, res: Response, next: NextFunction) => {
     try {
-        const {classId} = req.params;
-
-        const timetable = await timeTableCollection.findOne({classId});
-
+        const timetables = await timeTableCollection.find({});
         res.send({
-            result: timetable
+            result: timetables
         });
-
     } catch (error) {
         next(error);
     }
@@ -86,19 +83,36 @@ export const createTimeTable = async (req: CustomRequest, res: Response, next: N
     try {
 
         const {
-            classId,
+            title,
             fileLink
-        } = req.body;
+        }: {title: string, fileLink: string} = req.body;
 
-        const newAssignment = await timeTableCollection.create({
+        const {error} = Joi.object({
+            title: Joi.string().required().messages({
+                "any.required": "Title is required"
+            }),
+            fileLink: Joi.string().uri().required().messages({
+                "any.required": "File link is required",
+                "string.uri": "File link should be a valid url"
+            })
+        }).validate(req.body);
+
+        if(error) {
+            res.status(400).send({
+                errorMessage: error.message
+            });
+            return;
+        }
+
+        const newTimetable = await timeTableCollection.create({
             uploadedById: req.userDetails!!.userId,
-            classId,
+            title: title.trim(),
             fileLink
         });
 
         res.send({
-            message: "Assignment created successfully",
-            result: newAssignment
+            message: "Timetable created successfully",
+            result: newTimetable
         });
 
     } catch (error) {
@@ -106,41 +120,18 @@ export const createTimeTable = async (req: CustomRequest, res: Response, next: N
     }
 }
 
-export const updateTimeTable = async (req: CustomRequest, res: Response, next: NextFunction) => {
-    try {
-
-        const {
-            timeTableTitle,
-            classId,
-            assignmentStatus,
-            fileLink
-        } = req.body;
-
-        const { id } = req.params;
-
-        let updatedTimeTable = await timeTableCollection.findByIdAndUpdate(id, {
-                timeTableTitle,
-                classId,
-                assignmentStatus,
-                fileLink
-            });
-
-
-            res.send({
-                message: "Time table updated successfully",
-                result: updatedTimeTable
-            });
-        
-
-    } catch (error) {
-        next(error);
-    }
-}
 
 export const deleteTimeTable = async (req: CustomRequest, res: Response, next: NextFunction) => {
     try {
 
         const { id } = req.params;
+
+        if(!id) {
+            res.status(400).send({
+                errorMessage: "Time table ID to be deleted not supplied"
+            });
+            return;
+        }
 
         const timeTableToDelete = await timeTableCollection.findById(id);
 
