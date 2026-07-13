@@ -17,6 +17,7 @@ import logger from "morgan";
 import v1Routes from "./routes/v1Routes";
 import v2Routes from "./routes/v2Routes";
 import useragent from "express-useragent";
+import whatsappWebhookRoute from "./routes/whatsapp";
 var app: express.Application = express();
 
 const port = process.env.PORT || 4000;
@@ -65,6 +66,7 @@ app.use(useragent.express());
 
 app.use("/v1", v1Routes);
 app.use("/v2", v2Routes);
+app.use("/whatsapp", whatsappWebhookRoute);
 
 app.get("/", (_req, res) => {
   res.send("I'm healthy");

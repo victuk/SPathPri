@@ -39,6 +39,7 @@
     "readable-http-codes": "^1.1.1",
     "supertest": "^7.1.1",
     "ts-node": "^10.9.2",
+    "twilio": "^6.0.2",
     "uuid": "^9.0.0"
   },
   "devDependencies": {
