@@ -7,8 +7,6 @@ services:
     environment:
       - PORT=3000
     restart: always
-    depends_on:
-      - redis
   app2:
     build: .
     image: solvpath-pri:latest
@@ -17,8 +15,6 @@ services:
     environment:
       - PORT=3000
     restart: always
-    depends_on:
-      - redis
   app3:
     build: .
     image: solvpath-pri:latest
@@ -27,20 +23,3 @@ services:
     environment:
       - PORT=3000
     restart: always
-    depends_on:
-      - redis
-
-
-  redis:
-      image: redis:7-alpine
-      container_name: redis_cache
-      restart: always
-      ports:
-        - "6379:6379" # Only needed if you want to access Redis from your host machine
-        
-      volumes:
-        - redis_data:/data
-
-# Persistent storage so your data survives container restarts
-volumes:
-  redis_data:

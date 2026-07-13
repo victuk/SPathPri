@@ -1,3 +1,7 @@
+services:
+  - name: redis-service
+    image: redis:7-alpine
+
 steps:
   deploy-api:
     image: docker:cli
@@ -14,7 +18,17 @@ steps:
       # 3. Run compose commands natively against the host's directory structure
       - docker compose down
       - docker compose up -d --build
+  test-app:
+    image: node:20-alpine
+    environment:
+      REDIS_HOST: redis-service
+      REDIS_PORT: "6379"
+    commands:
+      - npm install
+      - npm test
+
 
 when:
   - branch: main
     event: push
+    
