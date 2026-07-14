@@ -2,12 +2,18 @@ steps:
   deploy-api:
     image: docker:cli
     volumes:
+      # Allows control over the host's Docker engine
       - /var/run/docker.sock:/var/run/docker.sock
+      # Mount your production application folder on the VPS
       - /var/www/solvpath_pri_sch:/host_env
     commands:
-      # Use the absolute path of the mounted file directly
-      - docker compose -f /host_env/docker-compose.yml down
-      - docker compose -f /host_env/docker-compose.yml up -d --build
+      # 1. Pull the latest code changes in the host directory (if applicable)
+      # 2. Change directory into the host folder where docker-compose.yml resides
+      - cp /host_env/.env .
+      
+      # 3. Run compose commands natively against the host's directory structure
+      - docker compose down
+      - docker compose up -d --build
 
 when:
   - branch: main
