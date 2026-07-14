@@ -1,5 +1,5 @@
 import express from "express";
-import bcrypt from "bcrypt";
+import bcrypt from "bcryptjs";
 import statusCodes from "readable-http-codes";
 import {
   comparePassword,

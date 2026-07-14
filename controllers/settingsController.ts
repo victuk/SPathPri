@@ -1,6 +1,6 @@
 import { NextFunction, Response } from "express";
 import { CustomRequest } from "../middleware/authenticatedUsersOnly";
-import bcrypt from "bcrypt";
+import bcrypt from "bcryptjs";
 import {
   staffsCollection
 } from "../models/staffs";

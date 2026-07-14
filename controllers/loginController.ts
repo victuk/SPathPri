@@ -1,6 +1,6 @@
 import { usersDB } from "../models/usersModel";
 import jwt, { decode, JwtPayload } from "jsonwebtoken";
-import bcrypt from "bcrypt";
+import bcrypt from "bcryptjs";
 import "dotenv/config";
 import { CustomRequest } from "../middleware/authenticatedUsersOnly";
 import { NextFunction, Response } from "express";

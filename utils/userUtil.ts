@@ -1,9 +1,9 @@
-import bcryptjs from "bcrypt";
+import bcryptjs from "bcryptjs";
 import nodemailer from "nodemailer";
 import { usersDB } from "../models/usersModel";
 // import { result } from "../models/resultModel";
 import { studentPositionAndRemark } from "../models/positionAndRemarksModel";
-import "dotenv/convig";
+import "dotenv/config";
 
 import crypto from "crypto";
 

@@ -7,7 +7,7 @@ import {
 import statusCodes from "readable-http-codes";
 import { CustomRequest } from "../../middleware/authenticatedUsersOnly";
 
-import bcrypt from "bcrypt";
+import bcrypt from "bcryptjs";
 import { sendEmail } from "../../utils/emailUtilities";
 import { teacherCollection } from "../../models/staffs";
 import { hashPassword } from "../../utils/authUtilities";

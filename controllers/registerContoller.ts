@@ -7,7 +7,7 @@ import { sendEmail } from "../utils/emailUtilities";
 
 import { usersDB } from "../models/usersModel";
 import { settings } from "../models/settingsModel";
-import bcrypt from "bcrypt";
+import bcrypt from "bcryptjs";
 import "dotenv/config";
 import { staffsCollection } from "../models/staffs";
 import { superAdminCollection } from "../models/superAdmins";
