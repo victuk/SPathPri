@@ -10,7 +10,6 @@ services:
     restart: always
     extra_hosts:
       - "host.docker.internal:host-gateway"
-    network_mode: "bridge"
       
 
   app2:
@@ -24,7 +23,6 @@ services:
     restart: always
     extra_hosts:
       - "host.docker.internal:host-gateway"
-    network_mode: "bridge"
 
   app3:
     build: .
@@ -37,5 +35,4 @@ services:
     restart: always
     extra_hosts:
       - "host.docker.internal:host-gateway"
-    network_mode: "bridge"
 
