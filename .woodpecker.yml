@@ -5,11 +5,9 @@ steps:
       - /var/run/docker.sock:/var/run/docker.sock
       - /var/www/solvpath_pri_sch:/host_env
     commands:
-      # Change directory straight to the mounted host directory
-      - cd /host_env
-      # Force a clean rebuild on the host system
-      - docker compose down
-      - docker compose up -d --build
+      # Use the absolute path of the mounted file directly
+      - docker compose -f /host_env/docker-compose.yml down
+      - docker compose -f /host_env/docker-compose.yml up -d --build
 
 when:
   - branch: main
