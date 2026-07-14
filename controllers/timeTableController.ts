@@ -149,7 +149,7 @@ export const deleteTimeTable = async (req: CustomRequest, res: Response, next: N
             return;
         }
 
-        const deletedTimeTable = await assignmentCollection.findByIdAndDelete(id);
+        const deletedTimeTable = await timeTableCollection.findByIdAndDelete(id);
 
         res.send({
             message: "Time table deleted successfully",
