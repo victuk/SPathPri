@@ -10,7 +10,7 @@ services:
       - REDIS_PORT=6379
     restart: always
     extra_hosts:
-      - "host.docker.internal:host-gateway"
+      - "host.docker.internal:172.22.0.1"
       
 
   app2:
@@ -24,7 +24,7 @@ services:
       - REDIS_PORT=6379
     restart: always
     extra_hosts:
-      - "host.docker.internal:host-gateway"
+      - "host.docker.internal:172.22.0.1"
 
   app3:
     build: .
@@ -37,4 +37,4 @@ services:
       - REDIS_PORT=6379
     restart: always
     extra_hosts:
-      - "host.docker.internal:host-gateway"
+      - "host.docker.internal:172.22.0.1"
