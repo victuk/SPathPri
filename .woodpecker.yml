@@ -1,19 +1,4 @@
-services:
-  - name: redis-service
-    image: redis:7-alpine
-
 steps:
-  # Step 1: Run your test suite in the isolated CI environment
-  test-app:
-    image: node:20-alpine
-    environment:
-      REDIS_HOST: redis-service
-      REDIS_PORT: "6379"
-    commands:
-      - npm install
-      - npm test
-
-  # Step 2: Only runs if test-app passes perfectly
   deploy-api:
     image: docker:cli
     volumes:

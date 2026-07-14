@@ -7,6 +7,9 @@ services:
     environment:
       - PORT=3000
     restart: always
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+
   app2:
     build: .
     image: solvpath-pri:latest
@@ -15,6 +18,9 @@ services:
     environment:
       - PORT=3000
     restart: always
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+
   app3:
     build: .
     image: solvpath-pri:latest
@@ -23,3 +29,5 @@ services:
     environment:
       - PORT=3000
     restart: always
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
