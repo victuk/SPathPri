@@ -17,7 +17,7 @@ function signJWT(payload: object | string) {
     return jwt.sign(
         payload,
         process.env.AUTH_KEY as string,
-        { expiresIn: process.env.ACCESS_TOKEN_EXPIRATION });
+        { expiresIn: process.env.ACCESS_TOKEN_EXPIRATION as any });
 }
 
 const generateRefreshToken = async (payload: {userId: string, role: string, userAgent: any, deviceId: string}) => {
@@ -27,7 +27,7 @@ const generateRefreshToken = async (payload: {userId: string, role: string, user
     const refreshToken = jwt.sign(
         payload, // Keep refresh token payload minimal
         process.env.REFRESH_TOKEN_SECRET as string,
-        { expiresIn: process.env.REFRESH_TOKEN_EXPIRATION }
+        { expiresIn: process.env.REFRESH_TOKEN_EXPIRATION as any }
     );
 
     const userSession = await userSessionCollection.findOne({userId: payload.userId});
@@ -50,7 +50,7 @@ const generateRefreshToken = async (payload: {userId: string, role: string, user
             userId: payload.userId,
             role: payload.role,
             deviceId: payload.deviceId,
-            refreshToken: refreshToken,
+            // refreshToken: refreshToken,
             platform: payload.userAgent.platform,
             browser: payload.userAgent.browser,
             lastLogin: new Date()
