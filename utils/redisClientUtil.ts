@@ -13,3 +13,4 @@ redisClient.on('error', (err) => {
 export {
     redisClient
 }
+
