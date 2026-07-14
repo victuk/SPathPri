@@ -6,10 +6,9 @@ services:
       - "3910:3000"
     environment:
       - PORT=3000
-      - REDIS_URL=redis://host.docker.internal:6379
+      - REDIS_URL=redis://127.0.0.1:6379
     restart: always
-    extra_hosts:
-      - "host.docker.internal:host-gateway"
+    network_mode: host
       
 
   app2:
@@ -19,10 +18,9 @@ services:
       - "3920:3000"
     environment:
       - PORT=3000
-      - REDIS_URL=redis://host.docker.internal:6379
+      - REDIS_URL=redis://127.0.0.1:6379
     restart: always
-    extra_hosts:
-      - "host.docker.internal:host-gateway"
+    network_mode: host
 
   app3:
     build: .
@@ -31,8 +29,7 @@ services:
       - "3930:3000"
     environment:
       - PORT=3000
-      - REDIS_URL=redis://host.docker.internal:6379
+      - REDIS_URL=redis://127.0.0.1:6379
     restart: always
-    extra_hosts:
-      - "host.docker.internal:host-gateway"
+    network_mode: host
 
