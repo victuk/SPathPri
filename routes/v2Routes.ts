@@ -191,7 +191,7 @@ v2Routes.post("/generate-student-result", async (req: CustomRequest, res: Respon
       return;
     }
 
-    const fileLink = await generateResultV2(studentId, studentDetails!!.schoolId as string, "student", req.body.term, req.body.year, req.body.classId);
+    const fileLink = await generateResultV2(studentId, studentDetails!!.schoolId?.toString() as string, "student", req.body.term, req.body.year, req.body.classId);
 
     fileToDelete = fileLink;
 
