@@ -1,5 +1,18 @@
 FROM node:20-alpine
 
+# Tell Puppeteer to skip downloading its bundled Chrome
+ENV PUPPETEER_SKIP_CHROMIUM_DOWNLOAD=true \
+    PUPPETEER_EXECUTABLE_PATH=/usr/bin/chromium-browser
+
+# Install native Chromium and necessary fonts
+RUN apk add --no-cache \
+    chromium \
+    nss \
+    freetype \
+    harfbuzz \
+    ca-certificates \
+    ttf-freefont
+
 # Install pnpm globally
 RUN npm install -g pnpm
 
