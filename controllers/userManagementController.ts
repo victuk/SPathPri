@@ -1229,7 +1229,13 @@ export const createStudent = async (
       req.userDetails?.schoolId
     );
 
-    const password = (schoolDetails?.schoolName)?.split(" ")[0] + "1234";
+    let password: string;
+
+    if(schoolDetails?.schoolName.toLocaleLowerCase() == "dominion") {
+      password = "dominion1234";
+    } else {
+      password = (schoolDetails?.schoolName)?.split(" ")[0] + "1234";
+    }
 
     console.log("req.userDetails?.userId", req.userDetails?.userId);
 

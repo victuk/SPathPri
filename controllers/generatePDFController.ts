@@ -119,14 +119,14 @@ export const generateResultV2 = async (
       })
       .countDocuments();
 
-      const result = await classPositionAndRemarksCollection.findOne({
+      const result: any = await classPositionAndRemarksCollection.findOne({
         studentId: userId,
         studentClass: classId,
         year,
         term,
       });
 
-      const behaviour = await classTeacherAffectiveAssessmentCollection.findOne({
+      const behaviour: any = await classTeacherAffectiveAssessmentCollection.findOne({
         studentId: userId,
         studentClass: classId,
         year,
@@ -228,7 +228,7 @@ export const generateResultV2 = async (
                     ${behaviourAssessmentTable(filteredBehaviour)}
                   </div>
                 </div>
-              <div style="position: absolute; right: 10px; top: 80vh;"><img src="${stamp?.fileLink}" style="height: 180px; border-radius: 5px;"></div>
+              <div style="text-align: center;"><img src="${stamp?.fileLink}" style="height: 180px; border-radius: 5px;"></div>
               <!-- <div style="padding: 5px; text-align: right;"><img src="${stamp?.fileLink}" style="height: 100px; border-radius: 5px;"></div> -->
             </div>
         `;

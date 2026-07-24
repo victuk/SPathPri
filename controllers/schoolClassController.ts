@@ -193,6 +193,34 @@ export const generateResult = async (
       return;
     }
 
+    if(process.env.EXCLUDE_POSITION?.includes(classId)) {
+      const score = ["A", "B", "C", "D"];
+      // const chosenScore = score[Math.floor(Math.random() * 3)];
+
+      await classPositionAndRemarksCollection.updateMany({
+        studentClass: classId,
+      }, {
+        handwriting: {
+          test: score[Math.floor(Math.random() * 3)],
+          project: score[Math.floor(Math.random() * 3)],
+          exams: score[Math.floor(Math.random() * 3)],
+          total: score[Math.floor(Math.random() * 3)]
+        },
+        CCA: {
+          test: score[Math.floor(Math.random() * 3)],
+          project: score[Math.floor(Math.random() * 3)],
+          exams: score[Math.floor(Math.random() * 3)],
+          total: score[Math.floor(Math.random() * 3)]
+        },
+        rhymes: {
+          test: score[Math.floor(Math.random() * 3)],
+          project: score[Math.floor(Math.random() * 3)],
+          exams: score[Math.floor(Math.random() * 3)],
+          total: score[Math.floor(Math.random() * 3)]
+        },
+      });
+    }
+
     const studentsInClass = await studentsCollection.find({ classId, schoolId: req.userDetails?.schoolId });
 
     if(studentsInClass.length == 0) {
@@ -221,7 +249,7 @@ export const generateResult = async (
     let studentsWithScore = 0;
 
     for(let i = 0; i < studentsInClass.length; i++) {
-      const studentSubject = classAssessments.filter(s => (s.studentId).toString() == (studentsInClass[i]._id).toString());
+      const studentSubject = classAssessments.filter((s: any) => (s?.studentId).toString() == (studentsInClass[i]._id).toString());
       if(studentSubject.length > 5) {
         studentsWithScore++;
       }
@@ -241,14 +269,14 @@ export const generateResult = async (
     const studentsAverage: any[] = [];
 
     for (let i = 0; i < studentsInClass.length; i++) {
-      const studentsRecord = classAssessments.filter(
-        (s: resultCollectionType) => s.studentId.toString() == studentsInClass[i]._id.toString()
+      const studentsRecord: any = classAssessments.filter(
+        (s: resultCollectionType | any) => s.studentId.toString() == studentsInClass[i]._id.toString()
       );
 
       let studentSubjectTotal = 0;
 
       for (let j = 0; j < studentsRecord.length; j++) {
-        studentSubjectTotal += studentsRecord[j].testsAndExamTotal;
+        studentSubjectTotal += studentsRecord[j]?.testsAndExamTotal;
       }
 
       let studentSubjectAverage: number = 0;
@@ -365,9 +393,9 @@ export const generateSubjectResult = async (term: string, year: string, classId:
     });
 
     for(let i = 0; i < subjects.length; i++) {
-      classAssessments.filter((c) => (c?.subjectId).toString() == (subjects[i]?._id).toString()).sort((a, b) => {
-        const studentA = a.testOne + a.testTwo + a.testThree + a.examScore;
-        const studentB = b.testOne + b.testTwo + b.testThree + b.examScore;
+      classAssessments.filter((c: any) => (c?.subjectId).toString() == (subjects[i]?._id).toString()).sort((a: any, b: any) => {
+        const studentA = a?.testOne + a?.testTwo + a?.testThree + a?.examScore;
+        const studentB = b?.testOne + b?.testTwo + b?.testThree + b?.examScore;
         return studentB - studentA;
       }).forEach(async (student, index) => {
         await resultCollection.findByIdAndUpdate(student._id, {
@@ -414,9 +442,9 @@ export const refreshStudentsClassSubjects = async (
 
     for (let i = 0; i < subjects.length; i++) {
       const subjectAlreadyExist = studentSubjects.find(
-        (s) =>
-          s.studentId.toString() == studentId &&
-          s.subjectId.toString() == subjects[i].id
+        (s: any) =>
+          s?.studentId.toString() == studentId &&
+          s?.subjectId.toString() == subjects[i].id
       );
 
       if (!subjectAlreadyExist) {
@@ -624,7 +652,7 @@ export const refreshStudentTotalAndAverageV2 = async (
       resultId, studentId, studentClass, term, year
     } = req.body;
 
-    const results = await resultCollection.find({
+    const results: any = await resultCollection.find({
       studentId, studentClass, term, year
     });
 

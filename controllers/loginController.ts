@@ -37,7 +37,7 @@ async function studentLogin(
       return;
     }
 
-    const studentScratchCard = await StudentsScratchCardCollection.findOne({
+    const studentScratchCard: any = await StudentsScratchCardCollection.findOne({
       scratchCardId,
     });
 
@@ -48,14 +48,14 @@ async function studentLogin(
       return;
     }
 
-    if(!studentScratchCard.studentId) {
+    if(!studentScratchCard?.studentId) {
       res.status(404).send({
         message: "This scratch card isn't assigned. to any student",
       });
       return;
     }
 
-    if(!studentScratchCard.schoolId) {
+    if(!studentScratchCard?.schoolId) {
       res.status(404).send({
         message: "This scratch card isn't assigned. to a school",
       });
