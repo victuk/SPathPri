@@ -232,7 +232,7 @@ export const classTeacherAndPrincipalRemarkTable = (result: any, response: any) 
                              <td style="padding: 5px;">${result?.classTeacherRemark}.</td>
                            </tr>
                            <tr style="font-size: 12px;">
-                             <td style="font-weight: bold; width: 140px;">Head Teacher's remark</td>
+                             <td style="font-weight: bold; width: 140px;">Head teacher's remark</td>
                              <td style="padding: 5px;">${result?.principalsRemark}. ${result?.includeWeakSubjects ? `${response.filter((r: any) => r.testsAndExamTotal < 50).length > 0 ? `Spend quality time to improve on ${response?.filter((r: any) => r?.testsAndExamTotal < 50).map((r: any) => r?.subjectId?.subject).join(", ")}.` : "Spend quality time to improve on your weak subjects."}` : ""}</td>
                            </tr>
                      </table> 
