@@ -64,21 +64,21 @@ app.use(express.urlencoded({ extended: false }));
 app.use(express.static(path.join(__dirname, 'public')));
 app.use(useragent.express());
 
-app.use("/v1", v1Routes);
-app.use("/v2", v2Routes);
-app.use("/whatsapp", whatsappWebhookRoute);
+// app.use("/v1", v1Routes);
+// app.use("/v2", v2Routes);
+// app.use("/whatsapp", whatsappWebhookRoute);
 
 app.get("/", (_req, res) => {
   res.send("I'm healthy");
 });
 
-// app.use('/', indexRouter);
-// app.use('/v1/profile', profile);
-// app.use("/v1/auth", auth);
-// app.use("/v1/note", note);
-// app.use("/v1/attendance", attendance);
-// app.use("/v1/student", student);
-// app.use("/v1/assessment", assessment);
+app.use('/', indexRouter);
+app.use('/v1/profile', profile);
+app.use("/v1/auth", auth);
+app.use("/v1/note", note);
+app.use("/v1/attendance", attendance);
+app.use("/v1/student", student);
+app.use("/v1/assessment", assessment);
 
 // catch 404 and forward to error handler
 app.use(function(req, res, next) {
