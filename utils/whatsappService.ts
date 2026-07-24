@@ -6,6 +6,7 @@ import { StudentsScratchCardCollection } from "../models/studentsScratchCard";
 import { whatsappSessionCollection } from "../models/whatsappService";
 
 export class WhatsappService {
+  
   id: string;
   incomingMessage: string;
 
