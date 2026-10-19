@@ -135,7 +135,7 @@ return "Hello there, welcome to Solvpath Primary School result checker. Send 1 t
           await whatsappSessionCollection.deleteMany({ sessionId: this.id });
           return [
             `Dear ${studentDetails?.firstName} ${studentDetails?.otherNames} ${studentDetails?.surname},\n`,
-            `Welcome to ${schoolDetails?.schoolName} result checker. Your result for ${studentClassDetails?.schoolClass} ${sessionDetails?.form?.term} term, ${sessionDetails?.form?.year} academic session is ready.`,
+            `Welcome to ${schoolDetails?.schoolName}. Your result for ${studentClassDetails?.schoolClass} ${sessionDetails?.form?.term} term, ${sessionDetails?.form?.year} academic session is ready.`,
             `Please click the link below to download your result. \n\n ${process.env.WHATSAPP_BASE_URL}/${result}`,
             `\n\n`,
             `Yours Sincerely,`,
