@@ -40,22 +40,41 @@ export class WhatsappService {
           subStep: "start",
         });
         return "Enter your scratch card registration number";
+      } else if (this.incomingMessage == "2") {
+        await whatsappSessionCollection.create({
+          sessionId: this.id,
+          step: "check-newsletter",
+          subStep: "start",
+        });
+        return "Enter your scratch card registration number";
       } else {
         await whatsappSessionCollection.deleteMany({ sessionId: this.id });
-        return "Hello there, welcome to Solvpath Primary School result checker. Send 1 to check your result. At any time send 'cancel' to start again.";
+        return [
+          "Welcome to Solvpath Whatsapp Assistant\n",
+          "Respond with",
+          "'1' to check your result",
+          "'2' to view your school's newsletter. \n",
+          "At any time send 'cancel' to start again.",
+        ].join("\n");
       }
     } else if (session) {
 
-if(this.incomingMessage.toLocaleLowerCase() == "start") {
-          await whatsappSessionCollection.deleteMany({ sessionId: this.id });
-return "Hello there, welcome to Solvpath Primary School result checker. Send 1 to check your result. At any time send 'cancel' to start again.";
-}
+      if (this.incomingMessage.toLocaleLowerCase() == "start") {
+        await whatsappSessionCollection.deleteMany({ sessionId: this.id });
+        return [
+          "Welcome to Solvpath Whatsapp Assistant\n",
+          "Respond with",
+          "'1' to check your result",
+          "'2' to view your school's newsletter. \n",
+          "At any time send 'cancel' to start again.",
+        ].join("\n");
+      }
 
       if (session.step == "check-result") {
         if (session.subStep == "start") {
-        //   const sessionDetails = await whatsappSessionCollection.findOne({
-        //     sessionId: this.id,
-        //   });
+          //   const sessionDetails = await whatsappSessionCollection.findOne({
+          //     sessionId: this.id,
+          //   });
 
           const studentDetails = await StudentsScratchCardCollection.findOne({
             scratchCardId: this.incomingMessage,
@@ -65,7 +84,7 @@ return "Hello there, welcome to Solvpath Primary School result checker. Send 1 t
 
           const schoolClasses = await classPositionAndRemarksCollection
             .find({
-                studentId: studentDetails?.studentId,
+              studentId: studentDetails?.studentId,
               term: studentDetails?.term,
               year: studentDetails?.year,
               schoolId: studentDetails?.schoolId,
@@ -91,7 +110,7 @@ return "Hello there, welcome to Solvpath Primary School result checker. Send 1 t
           console.log("schoolClasses 1", schoolClasses);
 
           return `
-            Choose a class below (respond with a number):\n\n${schoolClasses.map((sc: any, index) =>`${index + 1}. ${sc?.studentClass.schoolClass} result`).join("\n\n")}`;
+            Choose a class below (respond with a number):\n\n${schoolClasses.map((sc: any, index) => `${index + 1}. ${sc?.studentClass.schoolClass} result`).join("\n\n")}`;
         } else if (session.subStep == "choose-class") {
           const sessionDetails = await whatsappSessionCollection.findOne({
             sessionId: this.id,
@@ -109,16 +128,16 @@ return "Hello there, welcome to Solvpath Primary School result checker. Send 1 t
 
           console.log("schoolClasses", schoolClasses);
 
-          if(schoolClasses.length == 0) {
+          if (schoolClasses.length == 0) {
             return "No result for this class";
           }
 
           const classChosen: any =
             schoolClasses[parseInt(this.incomingMessage as string) - 1];
 
-            console.log("classChosen", classChosen);
+          console.log("classChosen", classChosen);
 
-            // await this.sendMessage(this.id, "Generating your result. Please wait...");
+          // await this.sendMessage(this.id, "Generating your result. Please wait...");
 
           const result = await generateResultV2(
             sessionDetails?.form?.studentId!,
@@ -128,13 +147,13 @@ return "Hello there, welcome to Solvpath Primary School result checker. Send 1 t
             sessionDetails?.form?.year,
             classChosen.studentClass,
           );
-          
+
           const studentDetails = await studentsCollection.findById(sessionDetails?.form?.studentId!);
           const schoolDetails = await schoolProfileCollection.findById(sessionDetails?.form?.schoolId!);
           const studentClassDetails = await schoolClassCollection.findById(classChosen.studentClass);
           await whatsappSessionCollection.deleteMany({ sessionId: this.id });
           return [
-            `Dear ${studentDetails?.firstName} ${studentDetails?.otherNames} ${studentDetails?.surname},\n`,
+            `Dear ${studentDetails?.firstName} ${studentDetails?.otherNames} ${studentDetails?.surname},`,
             `Welcome to ${schoolDetails?.schoolName}. Your result for ${studentClassDetails?.schoolClass} ${sessionDetails?.form?.term} term, ${sessionDetails?.form?.year} academic session is ready.`,
             `Please click the link below to download your result. \n\n ${process.env.WHATSAPP_BASE_URL}/${result}`,
             `\n\n`,
@@ -142,6 +161,37 @@ return "Hello there, welcome to Solvpath Primary School result checker. Send 1 t
             `Solvpath Global Limited`,
           ].join("\n");
         }
+      } else if (session.step == "check-newsletter") {
+        const scratchCardDetails = await StudentsScratchCardCollection.findOne({
+          scratchCardId: this.incomingMessage,
+        });
+
+        const studentDetails = await studentsCollection.findById(scratchCardDetails?.studentId!);
+
+        const schoolDetails = await schoolProfileCollection.findById(studentDetails?.schoolId!);
+
+        await whatsappSessionCollection.deleteMany({ sessionId: this.id });
+
+        if(!schoolDetails?.newsletterUrl) {
+          return [
+          `Dear ${studentDetails?.firstName} ${studentDetails?.otherNames} ${studentDetails?.surname},`,
+          `Welcome to ${schoolDetails?.schoolName}. `,
+          `A newsletter has not been uploaded yet for ${schoolDetails?.schoolName}, please try again later, thank you.`,
+          `\n\n`,
+          `Yours Sincerely,`,
+          `Solvpath Global Limited`,
+        ].join("\n");
+        }
+
+        return [
+          `Dear ${studentDetails?.firstName} ${studentDetails?.otherNames} ${studentDetails?.surname},`,
+          `Welcome to ${schoolDetails?.schoolName}. `,
+          `Please click the link below to view the newsletter. \n\n ${schoolDetails?.newsletterUrl}`,
+          `\n\n`,
+          `Yours Sincerely,`,
+          `Solvpath Global Limited`,
+        ].join("\n");
+
       }
     }
   }
