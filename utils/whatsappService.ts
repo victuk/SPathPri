@@ -155,8 +155,8 @@ export class WhatsappService {
           return [
             `Dear ${studentDetails?.firstName} ${studentDetails?.otherNames} ${studentDetails?.surname},\n`,
             `Welcome to ${schoolDetails?.schoolName}. Your result for ${studentClassDetails?.schoolClass} ${sessionDetails?.form?.term} term, ${sessionDetails?.form?.year} academic session is ready.`,
-            `Please click the link below to download your result. \n\n ${process.env.WHATSAPP_BASE_URL}/${result}`,
-            `\n\n`,
+            `Please click the link below to download your result. \n ${process.env.WHATSAPP_BASE_URL}/${result}`,
+            `\n`,
             `Yours Sincerely,`,
             `Solvpath Global Limited`,
           ].join("\n");
