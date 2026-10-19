@@ -3,6 +3,7 @@ import { schoolsCollection } from "../models/_schoolCollection";
 import { schoolClassCollection } from "../models/classModel";
 import { classPositionAndRemarksCollection } from "../models/classPositionAndRemarksModel";
 import { resultCollection } from "../models/resultModel";
+import { schoolProfileCollection } from "../models/schoolProfile";
 import { studentsCollection } from "../models/students";
 import { StudentsScratchCardCollection } from "../models/studentsScratchCard";
 import { whatsappSessionCollection } from "../models/whatsappService";
@@ -129,11 +130,11 @@ return "Hello there, welcome to Solvpath Primary School result checker. Send 1 t
           );
           
           const studentDetails = await studentsCollection.findById(sessionDetails?.form?.studentId!);
-          const schoolDetails = await schoolsCollection.findById(sessionDetails?.form?.schoolId!);
+          const schoolDetails = await schoolProfileCollection.findById(sessionDetails?.form?.schoolId!);
           const studentClassDetails = await schoolClassCollection.findById(classChosen.studentClass);
           await whatsappSessionCollection.deleteMany({ sessionId: this.id });
           return [
-            `Dear ${studentDetails?.firstName} ${studentDetails?.surname},\n`,
+            `Dear ${studentDetails?.firstName} ${studentDetails?.otherNames} ${studentDetails?.surname},\n`,
             `Welcome to ${schoolDetails?.schoolName} result checker. Your result for ${studentClassDetails?.schoolClass} ${sessionDetails?.form?.term} term, ${sessionDetails?.form?.year} academic session is ready.`,
             `Please click the link below to download your result. \n\n ${process.env.WHATSAPP_BASE_URL}/${result}`,
             `\n\n`,
