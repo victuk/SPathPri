@@ -4,15 +4,17 @@ import { classPositionAndRemarksCollection } from "../models/classPositionAndRem
 import { resultCollection } from "../models/resultModel";
 import { StudentsScratchCardCollection } from "../models/studentsScratchCard";
 import { whatsappSessionCollection } from "../models/whatsappService";
+import axios from "axios";
 
 export class WhatsappService {
-  
   id: string;
   incomingMessage: string;
+  sendMessage: (to: string, message: string) => Promise<axios.AxiosResponse<any, any, {}>>;
 
-  constructor(id: string, incomingMessage: string) {
+  constructor(id: string, incomingMessage: string, sendMessage: (to: string, message: string) => Promise<axios.AxiosResponse<any, any, {}>>) {
     this.id = id;
     this.incomingMessage = incomingMessage;
+    this.sendMessage = sendMessage;
   }
 
   async getSession() {
@@ -36,9 +38,16 @@ export class WhatsappService {
         });
         return "Enter your scratch card registration number";
       } else {
-        return "Hello there, welcome to Solvpath result checker. Send 1 to check your result. At any time send 'cancel' to start again.";
+        await whatsappSessionCollection.deleteMany({ sessionId: this.id });
+        return "Hello there, welcome to Solvpath Primary School result checker. Send 1 to check your result. At any time send 'cancel' to start again.";
       }
     } else if (session) {
+
+if(this.incomingMessage.toLocaleLowerCase() == "start") {
+          await whatsappSessionCollection.deleteMany({ sessionId: this.id });
+return "Hello there, welcome to Solvpath Primary School result checker. Send 1 to check your result. At any time send 'cancel' to start again.";
+}
+
       if (session.step == "check-result") {
         if (session.subStep == "start") {
         //   const sessionDetails = await whatsappSessionCollection.findOne({
@@ -106,6 +115,8 @@ export class WhatsappService {
 
             console.log("classChosen", classChosen);
 
+            // await this.sendMessage(this.id, "Generating your result. Please wait...");
+
           const result = await generateResultV2(
             sessionDetails?.form?.studentId!,
             sessionDetails?.form?.schoolId!,
@@ -114,10 +125,9 @@ export class WhatsappService {
             sessionDetails?.form?.year,
             classChosen.studentClass,
           );
-
-          console.log("Result", result);
-
-          return `https://d1odfy-ip-197-211-52-71.tunnelmole.net/${result}`;
+          await whatsappSessionCollection.deleteMany({ sessionId: this.id });
+          return `Your result is ready. Please click the link below to download your result. \n\n ${process.env.WHATSAPP_BASE_URL}/${result}`;
+          // return `${process.env.WHATSAPP_BASE_URL}/${result}`;
         }
       }
     }

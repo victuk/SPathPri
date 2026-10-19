@@ -1,26 +1,37 @@
+import "dotenv/config"
 import { Router } from "express";
-import MessagingResponse from "twilio/lib/twiml/MessagingResponse";
 import { WhatsappService } from "../utils/whatsappService";
+import axios from "axios";
 
 const whatsappWebhookRoute = Router();
 
-whatsappWebhookRoute.post("/whatsapp", async (req, res) => {
-  const incomingMessage = req.body.Body;
-  const fromNumber = req.body.From;
+const sendMessage = async (to: string, message: string) => {
+  return await axios.post("https://wasenderapi.com/api/send-message", {
+      to,
+      text: message || "Invalid request, kindly try again."
+    }, {
+      headers: {
+        Authorization: `Bearer ${process.env.WASENDER_ACCESS_TOKEN}`,
+        "Content-Type": "application/json"
+      },
+    });
+}
 
-  console.log(fromNumber, incomingMessage);
+whatsappWebhookRoute.post("/whatsapp", async (req, res, next) => {
+  const sender = req.body.data.messages.key.cleanedSenderPn;
+  try {
+    const incomingMessage = req.body.data.messages.messageBody;
+    
+    const wsServiceResponse = new WhatsappService(sender, incomingMessage, sendMessage);
+    const v = await wsServiceResponse.execution();
 
-  const twiml = new MessagingResponse();
-
-  const wsServiceResponse = new WhatsappService(fromNumber, incomingMessage);
-
-  const v = await wsServiceResponse.execution();
-
-  console.log(v);
-
-  twiml.message(v || "Invalid response");
-
-  res.type('text/xml').send(twiml.toString());
+    await sendMessage(sender, v as string);
+    
+    res.status(200).send("Successful!");
+  } catch (error: any) {
+    await sendMessage(sender, "An error occurred, please try again later.");
+    next(error);
+  }
 });
 
 export default whatsappWebhookRoute;
