@@ -60,7 +60,7 @@ export class WhatsappService {
       }
     } else if (session) {
 
-      if (this.incomingMessage.toLocaleLowerCase() == "start") {
+      if (this.incomingMessage.toLocaleLowerCase() == "start" || isTimeDifferenceGreaterThan30Minutes(new Date(), session.createdAt)) {
         await whatsappSessionCollection.deleteMany({ sessionId: this.id });
         return [
           "Welcome to Solvpath Whatsapp Assistant\n",
