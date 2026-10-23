@@ -39,17 +39,18 @@ export class WhatsappService {
           step: "check-result",
           subStep: "start",
         });
-        return "Enter your scratch card registration number";
+        return "Enter your scratch card number";
       } else if (this.incomingMessage == "2") {
         await whatsappSessionCollection.create({
           sessionId: this.id,
           step: "check-newsletter",
           subStep: "start",
         });
-        return "Enter your scratch card registration number";
+        return "Enter your scratch card number";
       } else {
         await whatsappSessionCollection.deleteMany({ sessionId: this.id });
         return [
+          "You entered a wrong input\n\n",
           "Welcome to Solvpath Whatsapp Assistant\n",
           "Respond with",
           "'1' to check your result",
@@ -82,6 +83,13 @@ export class WhatsappService {
 
           console.log("Student Details", studentDetails);
 
+          if (!studentDetails) {
+            return [
+              "Invalid scratch card number, kindly try again.\n\n",
+              "Kindly enter a valid scratch card number again:"
+            ].join("\n");
+          }
+
           const schoolClasses = await classPositionAndRemarksCollection
             .find({
               studentId: studentDetails?.studentId,
@@ -90,6 +98,13 @@ export class WhatsappService {
               schoolId: studentDetails?.schoolId,
             })
             .populate("studentClass");
+
+          if (schoolClasses.length == 0) {
+            return [
+              "The scratch card is not linked to any class result. Kindly try again\n\n",
+              "Kindly enter a different scratch card number again:"
+            ].join("\n");
+          }
 
           await whatsappSessionCollection.findOneAndUpdate(
             {
@@ -148,15 +163,26 @@ export class WhatsappService {
             classChosen.studentClass,
           );
 
+
           const studentDetails = await studentsCollection.findById(sessionDetails?.form?.studentId!);
           const schoolDetails = await schoolProfileCollection.findById(sessionDetails?.form?.schoolId!);
           const studentClassDetails = await schoolClassCollection.findById(classChosen.studentClass);
           await whatsappSessionCollection.deleteMany({ sessionId: this.id });
+
+          if (!result) {
+            return [
+              `Dear ${studentDetails?.firstName} ${studentDetails?.otherNames} ${studentDetails?.surname},\n`,
+              `Welcome to ${schoolDetails?.schoolName}. Your result for ${studentClassDetails?.schoolClass} ${sessionDetails?.form?.term} term, ${sessionDetails?.form?.year} academic session is not available currently.`,
+              "Please try again sometime in the future\n",
+              `Yours Sincerely,`,
+              `Solvpath Global Limited`,
+            ].join("\n");
+          }
+
           return [
             `Dear ${studentDetails?.firstName} ${studentDetails?.otherNames} ${studentDetails?.surname},\n`,
             `Welcome to ${schoolDetails?.schoolName}. Your result for ${studentClassDetails?.schoolClass} ${sessionDetails?.form?.term} term, ${sessionDetails?.form?.year} academic session is ready.`,
-            `Please click the link below to download your result. \n ${process.env.WHATSAPP_BASE_URL}/${result}`,
-            `\n`,
+            `Please click the link below to download your result. \n ${process.env.WHATSAPP_BASE_URL}/${result}\n`,
             `Yours Sincerely,`,
             `Solvpath Global Limited`,
           ].join("\n");
@@ -172,15 +198,14 @@ export class WhatsappService {
 
         await whatsappSessionCollection.deleteMany({ sessionId: this.id });
 
-        if(!schoolDetails?.newsletterUrl) {
+        if (!schoolDetails?.newsletterUrl) {
           return [
-          `Dear ${studentDetails?.firstName} ${studentDetails?.otherNames} ${studentDetails?.surname},`,
-          `Welcome to ${schoolDetails?.schoolName}. `,
-          `A newsletter has not been uploaded yet for ${schoolDetails?.schoolName}, please try again later, thank you.`,
-          `\n\n`,
-          `Yours Sincerely,`,
-          `Solvpath Global Limited`,
-        ].join("\n");
+            `Dear ${studentDetails?.firstName} ${studentDetails?.otherNames} ${studentDetails?.surname},`,
+            `Welcome to ${schoolDetails?.schoolName}. `,
+            `A newsletter has not been uploaded yet for ${schoolDetails?.schoolName}, please try again later, thank you.\n`,
+            `Yours Sincerely,`,
+            `Solvpath Global Limited`,
+          ].join("\n");
         }
 
         return [
