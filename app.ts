@@ -66,7 +66,7 @@ app.use(useragent.express());
 
 app.use("/v1", v1Routes);
 app.use("/v2", v2Routes);
-app.use("/whatsapp", whatsappWebhookRoute);
+app.use("/whatsapp-", whatsappWebhookRoute);
 
 app.get("/", (_req, res) => {
   res.send("I'm healthy");
